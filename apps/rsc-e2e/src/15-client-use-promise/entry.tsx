@@ -20,7 +20,7 @@ export default function ExpoViewsTest() {
         Mount promise (may freeze native)
       </Text>
 
-      {mount && <Child />}
+      <Suspense fallback={<Text>Pending 1...</Text>}>{mount && <Child />}</Suspense>
     </View>
   );
 }
@@ -28,7 +28,7 @@ export default function ExpoViewsTest() {
 function Child() {
   const value = use(getServerMessage());
 
-  return <Suspense fallback={<Text>Pending...</Text>}>{value}</Suspense>;
+  return <Suspense fallback={<Text>Pending 2...</Text>}>{value}</Suspense>;
 }
 
 function getServerMessage() {

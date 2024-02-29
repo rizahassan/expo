@@ -21,11 +21,11 @@ createWebSocketConnection().onmessage = (message) => {
     case 'sendDevCommand':
       switch (data.params.name) {
         case 'rsc-reload':
-          if (data.params.platform === OS) {
-            globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
-          } else {
-            console.warn('FAKE: RSC reload is only supported on web');
-          }
+          //   if (data.params.platform === OS) {
+          globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
+          //   } else {
+          //     console.warn('FAKE: RSC reload is only supported on web');
+          //   }
           break;
       }
       break;

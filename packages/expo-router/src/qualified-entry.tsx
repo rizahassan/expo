@@ -5,15 +5,39 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from './exports';
 
 import { Router } from './rsc/router/client';
-import { Try } from './views/Try';
+import { ErrorBoundaryProps, Try } from './views/Try';
 import { LocationContext } from './rsc/router/WindowLocationContext';
+
+// Add root error recovery.
+function RootErrorBoundary(props: ErrorBoundaryProps) {
+  React.useEffect(() => {
+    function refetchRoute() {
+      if (props.error) {
+        props.retry();
+      }
+    }
+
+    globalThis.__WAKU_RSC_RELOAD_LISTENERS__ ||= [];
+    const index = globalThis.__WAKU_RSC_RELOAD_LISTENERS__.indexOf(
+      globalThis.__WAKU_REFETCH_ROUTE__
+    );
+    if (index !== -1) {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.splice(index, 1, refetchRoute);
+    } else {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.unshift(refetchRoute);
+    }
+    globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
+  }, [props.error, props.retry]);
+
+  return <ErrorBoundary error={props.error} retry={props.retry} />;
+}
 
 // Must be exported or Fast Refresh won't update the context
 export function App() {
   return (
     <LocationContext>
       <SafeAreaProvider>
-        <Try catch={ErrorBoundary}>
+        <Try catch={RootErrorBoundary}>
           <Router />
         </Try>
       </SafeAreaProvider>

@@ -1,10 +1,6 @@
 "use strict";
 /* eslint-env browser */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const os_1 = __importDefault(require("expo-router/os"));
 function createWebSocketConnection(path = '/message') {
     const getDevServer = require('react-native/Libraries/Core/Devtools/getDevServer');
     const devServer = getDevServer();
@@ -22,12 +18,11 @@ createWebSocketConnection().onmessage = (message) => {
         case 'sendDevCommand':
             switch (data.params.name) {
                 case 'rsc-reload':
-                    if (data.params.platform === os_1.default) {
-                        globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
-                    }
-                    else {
-                        console.warn('FAKE: RSC reload is only supported on web');
-                    }
+                    //   if (data.params.platform === OS) {
+                    globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
+                    //   } else {
+                    //     console.warn('FAKE: RSC reload is only supported on web');
+                    //   }
                     break;
             }
             break;

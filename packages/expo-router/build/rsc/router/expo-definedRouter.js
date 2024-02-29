@@ -58,20 +58,20 @@ function wakuRouteIdToExpoRoute(route, routeId) {
     // Route like `second/layout` or `second/page` to match `second/_layout` or `second`
     const parts = routeId.split('/');
     let currentRoute = route;
-    console.log('0.', parts);
+    // console.log('0.', parts);
     for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
-        console.log('1.', part);
+        // console.log('1.', part);
         if (i === parts.length - 1) {
-            console.log('Last =>', part, currentRoute);
+            // console.log('Last =>', part, currentRoute);
             if (part === 'layout' && currentRoute?.type === 'layout') {
                 return currentRoute;
                 // return route;
             }
             if (part === 'page') {
-                console.log('2.', part);
+                // console.log('2.', part);
                 if (currentRoute?.type === 'layout') {
-                    console.log('3.', part);
+                    // console.log('3.', part);
                     // TODO: Obviously not right, doesn't account for nested index or groups.
                     return currentRoute.children?.find((child) => child.type === 'route' && child.route === 'index');
                 }
@@ -94,7 +94,10 @@ exports.default = (0, defineRouter_1.defineRouter)(
 // getPathConfig
 async () => {
     const pathConfig = await getPathConfig();
-    console.log('[CLI|ROUTER]: getPathConfig', require('util').inspect(pathConfig, { depth: 20, colors: true }));
+    // console.log(
+    //   '[CLI|ROUTER]: getPathConfig',
+    //   require('util').inspect(pathConfig, { depth: 20, colors: true })
+    // );
     return pathConfig;
 }, 
 // getComponent (id is "**/layout" or "**/page")
@@ -102,7 +105,7 @@ async (id, unstable_setShouldSkip) => {
     unstable_setShouldSkip({}); // always skip if possible
     const route = wakuRouteIdToExpoRoute(routes, id);
     // NOTE: Hack to test other stuff
-    console.log('getComponent', id, route);
+    // console.log('getComponent', id, route);
     if (route) {
         const { loadRoute, children, ...rest } = route;
         // const { mapping, items } = result;
@@ -112,7 +115,7 @@ async (id, unstable_setShouldSkip) => {
         });
         return RouteNode;
     }
-    console.log('Missing router entry for:', id);
+    // console.log('Missing router entry for:', id);
     return null;
     // if (id.includes('page')) {
     //   return (props) => createElement(ctx('./index.tsx').default, props);

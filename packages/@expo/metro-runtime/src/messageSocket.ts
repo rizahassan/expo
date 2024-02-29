@@ -14,11 +14,11 @@ messageSocket.onmessage = (message) => {
           window.location.reload();
           break;
         case 'rsc-reload':
-          if (data.params.platform === 'web') {
-            globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
-          } else {
-            console.warn('FAKE: RSC reload is only supported on web');
-          }
+          // if (data.params.platform === 'web') {
+          globalThis.__WAKU_RSC_RELOAD_LISTENERS__?.forEach((l) => l());
+          // } else {
+          //   console.warn('FAKE: RSC reload is only supported on web');
+          // }
           break;
       }
       break;

@@ -50,7 +50,7 @@ function assert(foo: any, msg: string): asserts foo {
  * HMR Client that receives from the server HMR updates and propagates them
  * runtime to reflects those changes.
  */
-const HMRClient = {
+export const HMRClient = {
   enable() {
     if (hmrUnavailableReason !== null) {
       // If HMR became unavailable while you weren't using it,
@@ -94,42 +94,13 @@ const HMRClient = {
   registerBundle(requestUrl: string) {
     assert(hmrClient, 'Expected HMRClient.setup() call at startup.');
     pendingEntryPoints.push(requestUrl);
-    registerBundleEntryPoints(hmrClient);
+    this._registerBundleEntryPoints(hmrClient);
   },
 
-  log(level: LogLevel, data: any[]) {
-    // if (!hmrClient) {
-    //   // Catch a reasonable number of early logs
-    //   // in case hmrClient gets initialized later.
-    //   pendingLogs.push([level, data]);
-    //   if (pendingLogs.length > 100) {
-    //     pendingLogs.shift();
-    //   }
-    //   return;
-    // }
-    // try {
-    //   hmrClient.send(
-    //     JSON.stringify({
-    //       type: 'log',
-    //       level,
-    //       mode: 'BRIDGE',
-    //       data: data.map((item) =>
-    //         typeof item === 'string'
-    //           ? item
-    //           : prettyFormat(item, {
-    //               escapeString: true,
-    //               highlight: true,
-    //               maxDepth: 3,
-    //               min: true,
-    //               plugins: [plugins.ReactElement],
-    //             })
-    //       ),
-    //     })
-    //   );
-    // } catch {
-    //   // If sending logs causes any failures we want to silently ignore them
-    //   // to ensure we do not cause infinite-logging loops.
-    // }
+  log(level: LogLevel, data: any[]) {},
+
+  isSetup() {
+    return !!hmrClient;
   },
 
   // Called once by the bridge on startup, even if Fast Refresh is off.
@@ -138,56 +109,36 @@ const HMRClient = {
     isEnabled,
     url,
     onError,
+    onReload,
   }: {
     isEnabled: boolean;
     url: URL;
     onError?: (error: Error) => void;
+    onReload: () => void;
   }) {
     assert(!hmrClient, 'Cannot initialize hmrClient twice');
 
     const serverScheme = url.protocol === 'https:' ? 'wss' : 'ws';
     const client = new MetroHMRClient(`${serverScheme}://${url.host}/hot`);
     hmrClient = client;
-    console.log('[HMR] setup:', url);
+
     // HMRServer understands regular bundle URLs, so prefer that in case
     // there are any important URL parameters we can't reconstruct from
     // `setup()`'s arguments.
     pendingEntryPoints.push(url.toString());
 
-    client.on('connection-error', (e: Error) => {
-      let error = `Cannot connect to Metro.
- 
- Try the following to fix the issue:
- - Ensure the Metro dev server is running and available on the same network as this device`;
-      error += `
- 
- URL: ${url.host}
- 
- Error: ${e.message}`;
-
-      setHMRUnavailableReason(error);
-    });
-
-    client.on('update-start', ({ isInitialUpdate }: { isInitialUpdate?: boolean }) => {
+    client.on('update-start', () => {
       currentCompileErrorMessage = null;
       didConnect = true;
-
-      // if (client.isEnabled() && !isInitialUpdate) {
-      //   // LoadingView.showMessage('Refreshing...', 'refresh');
-      // }
     });
 
     client.on('update', ({ isInitialUpdate }: { isInitialUpdate?: boolean }) => {
       if (client.isEnabled() && !isInitialUpdate) {
-        if (typeof window !== 'undefined') {
-          //   LogBox.clearAllLogs();
-        }
+        onReload();
       }
     });
 
     client.on('error', (data: { type: string; message: string }) => {
-      //   LoadingView.hide();
-
       if (data.type === 'GraphNotFoundError') {
         client.close();
         setHMRUnavailableReason('Metro has restarted since the last edit. Reload to reconnect.');
@@ -202,9 +153,23 @@ const HMRClient = {
       }
     });
 
-    client.on('close', (closeEvent: { code: number; reason: string }) => {
-      //   LoadingView.hide();
+    // NOTE: This will likely never happen
+    client.on('connection-error', (e: Error) => {
+      let error = `Cannot connect to Metro.
+   
+   Try the following to fix the issue:
+   - Ensure the Metro dev server is running and available on the same network as this device`;
+      error += `
+   
+   URL: ${url.host}
+   
+   Error: ${e.message}`;
 
+      setHMRUnavailableReason(error);
+    });
+
+    // NOTE: This will likely never happen
+    client.on('close', (closeEvent: { code: number; reason: string }) => {
       // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1
       // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.5
       const isNormalOrUnsetCloseReason =
@@ -233,8 +198,26 @@ To reconnect:
       HMRClient.disable();
     }
 
-    registerBundleEntryPoints(hmrClient);
+    this._registerBundleEntryPoints(hmrClient);
     flushEarlyLogs();
+  },
+
+  _registerBundleEntryPoints(client: HMRClientType | null) {
+    if (hmrUnavailableReason != null || currentCompileErrorMessage != null) {
+      // Send a reload event to the client to make sure it's in a clean state.
+      //   this._onFullReload();
+      return;
+    }
+
+    if (pendingEntryPoints.length > 0) {
+      client?.send(
+        JSON.stringify({
+          type: 'register-entrypoints',
+          entryPoints: pendingEntryPoints,
+        })
+      );
+      pendingEntryPoints.length = 0;
+    }
   },
 };
 
@@ -252,22 +235,6 @@ function setHMRUnavailableReason(reason: string) {
   if (hmrClient.isEnabled() && didConnect) {
     console.warn(reason);
     // (Not using the `warning` module to prevent a Buck cycle.)
-  }
-}
-
-function registerBundleEntryPoints(client: HMRClientType | null) {
-  if (hmrUnavailableReason != null) {
-    return;
-  }
-
-  if (pendingEntryPoints.length > 0) {
-    client?.send(
-      JSON.stringify({
-        type: 'register-entrypoints',
-        entryPoints: pendingEntryPoints,
-      })
-    );
-    pendingEntryPoints.length = 0;
   }
 }
 
@@ -301,8 +268,6 @@ function showCompileError({ onError }: { onError?: (error: Error) => void } = {}
     throw error;
   }
 }
-
-export default HMRClient;
 
 import { WebSocket } from 'ws';
 
@@ -496,6 +461,7 @@ export function createNodeFastRefresh({ onReload }: { onReload }) {
     register: ReactRefreshRuntime.register,
 
     performReactRefresh() {
+      console.log('[CLI]:', 'performReactRefresh');
       //   if (ReactRefreshRuntime.hasUnrecoverableErrors()) {
       onReload();
       //     return;

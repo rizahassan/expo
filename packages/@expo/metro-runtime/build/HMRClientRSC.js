@@ -11,10 +11,11 @@
  */
 // import prettyFormat, { plugins } from 'pretty-format';
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.createNodeFastRefresh = void 0;
 // import LoadingView from './LoadingView';
 // import LogBox from './error-overlay/LogBox';
 // import getDevServer from './getDevServer';
-const MetroHMRClient = require('metro-runtime/src/modules/HMRClient');
+// const MetroHMRClient = require('metro-runtime/src/modules/HMRClient');
 const pendingEntryPoints = [];
 let hmrClient = null;
 let hmrUnavailableReason = null;
@@ -105,27 +106,16 @@ const HMRClient = {
     },
     // Called once by the bridge on startup, even if Fast Refresh is off.
     // It creates the HMR client but doesn't actually set up the socket yet.
-    setup({ isEnabled, onError }) {
+    setup({ isEnabled, url, onError, }) {
         assert(!hmrClient, 'Cannot initialize hmrClient twice');
-        const devServerUrl = typeof window === 'undefined' ? __DEV_SERVER_URL__ : window.location;
-        const serverScheme = devServerUrl.protocol === 'https:' ? 'wss' : 'ws';
-        const client = new MetroHMRClient(`${serverScheme}://${devServerUrl.host}/hot`);
+        const serverScheme = url.protocol === 'https:' ? 'wss' : 'ws';
+        const client = new MetroHMRClient(`${serverScheme}://${url.host}/hot`);
         hmrClient = client;
-        // if (typeof window === 'undefined') {
-        if (typeof __DEV_SERVER_URL__ !== 'undefined') {
-            pendingEntryPoints.push(__DEV_SERVER_URL__.toString());
-        }
-        // } else {
-        //   const { fullBundleUrl } = getDevServer();
-        //   if (fullBundleUrl) {
-        //     pendingEntryPoints.push(
-        //       // HMRServer understands regular bundle URLs, so prefer that in case
-        //       // there are any important URL parameters we can't reconstruct from
-        //       // `setup()`'s arguments.
-        //       fullBundleUrl
-        //     );
-        //   }
-        // }
+        console.log('[HMR] setup:', url);
+        // HMRServer understands regular bundle URLs, so prefer that in case
+        // there are any important URL parameters we can't reconstruct from
+        // `setup()`'s arguments.
+        pendingEntryPoints.push(url.toString());
         client.on('connection-error', (e) => {
             let error = `Cannot connect to Metro.
  
@@ -133,7 +123,7 @@ const HMRClient = {
  - Ensure the Metro dev server is running and available on the same network as this device`;
             error += `
  
- URL: ${devServerUrl.host}
+ URL: ${url.host}
  
  Error: ${e.message}`;
             setHMRUnavailableReason(error);
@@ -141,20 +131,16 @@ const HMRClient = {
         client.on('update-start', ({ isInitialUpdate }) => {
             currentCompileErrorMessage = null;
             didConnect = true;
-            if (client.isEnabled() && !isInitialUpdate) {
-                // LoadingView.showMessage('Refreshing...', 'refresh');
-            }
+            // if (client.isEnabled() && !isInitialUpdate) {
+            //   // LoadingView.showMessage('Refreshing...', 'refresh');
+            // }
         });
         client.on('update', ({ isInitialUpdate }) => {
             if (client.isEnabled() && !isInitialUpdate) {
-                dismissRedbox();
                 if (typeof window !== 'undefined') {
                     //   LogBox.clearAllLogs();
                 }
             }
-        });
-        client.on('update-done', () => {
-            //   LoadingView.hide();
         });
         client.on('error', (data) => {
             //   LoadingView.hide();
@@ -217,12 +203,6 @@ function setHMRUnavailableReason(reason) {
 }
 function registerBundleEntryPoints(client) {
     if (hmrUnavailableReason != null) {
-        if (typeof window !== 'undefined') {
-            // "Bundle Splitting – Metro disconnected"
-            window.location.reload();
-        }
-        else {
-        }
         return;
     }
     if (pendingEntryPoints.length > 0) {
@@ -243,16 +223,10 @@ function flushEarlyLogs() {
         pendingLogs.length = 0;
     }
 }
-function dismissRedbox() {
-    // TODO(EvanBacon): Error overlay for web.
-}
 function showCompileError({ onError } = {}) {
     if (currentCompileErrorMessage === null) {
         return;
     }
-    // Even if there is already a redbox, syntax errors are more important.
-    // Otherwise you risk seeing a stale runtime error while a syntax error is more recent.
-    dismissRedbox();
     const message = currentCompileErrorMessage;
     currentCompileErrorMessage = null;
     const error = new Error(message);
@@ -268,4 +242,195 @@ function showCompileError({ onError } = {}) {
     }
 }
 exports.default = HMRClient;
+const ws_1 = require("ws");
+const EventEmitter = require('metro-runtime/src/modules/vendor/eventemitter3');
+const inject = ({ module: [id, code], sourceURL }) => {
+    // eslint-disable-next-line no-eval
+    eval(code);
+};
+const injectUpdate = (update) => {
+    update.added.forEach(inject);
+    update.modified.forEach(inject);
+};
+class MetroHMRClient extends EventEmitter {
+    _isEnabled = false;
+    _pendingUpdate = null;
+    _queue = [];
+    _state = 'opening';
+    constructor(url) {
+        super();
+        // Access the global WebSocket object only after enabling the client,
+        // since some polyfills do the initialization lazily.
+        this._ws = new ws_1.WebSocket(url);
+        this._ws.onopen = () => {
+            this._state = 'open';
+            this.emit('open');
+            this._flushQueue();
+        };
+        this._ws.onerror = (error) => {
+            this.emit('connection-error', error);
+        };
+        this._ws.onclose = (closeEvent) => {
+            this._state = 'closed';
+            this.emit('close', closeEvent);
+        };
+        this._ws.onmessage = (message) => {
+            const data = JSON.parse(String(message.data));
+            console.log('[server] on message:', data);
+            switch (data.type) {
+                case 'bundle-registered':
+                    this.emit('bundle-registered');
+                    break;
+                case 'update-start':
+                    this.emit('update-start', data.body);
+                    break;
+                case 'update':
+                    this.emit('update', data.body);
+                    break;
+                case 'update-done':
+                    this.emit('update-done');
+                    break;
+                case 'error':
+                    this.emit('error', data.body);
+                    break;
+                default:
+                    this.emit('error', {
+                        type: 'unknown-message',
+                        message: data,
+                    });
+            }
+        };
+        this.on('update', (update) => {
+            if (this._isEnabled) {
+                // NOTE: Disable injection for now since the requests just trigger a new bundle with a delta index.
+                // injectUpdate(update);
+            }
+            else if (this._pendingUpdate == null) {
+                this._pendingUpdate = update;
+            }
+            else {
+                this._pendingUpdate = mergeUpdates(this._pendingUpdate, update);
+            }
+        });
+    }
+    close() {
+        this._ws.close();
+    }
+    send(message) {
+        switch (this._state) {
+            case 'opening':
+                this._queue.push(message);
+                break;
+            case 'open':
+                this._ws.send(message);
+                break;
+            case 'closed':
+                // Ignore.
+                break;
+            default:
+                throw new Error('[WebSocketHMRClient] Unknown state: ' + this._state);
+        }
+    }
+    _flushQueue() {
+        this._queue.forEach((message) => this.send(message));
+        this._queue.length = 0;
+    }
+    enable() {
+        this._isEnabled = true;
+        const update = this._pendingUpdate;
+        this._pendingUpdate = null;
+        if (update != null) {
+            injectUpdate(update);
+        }
+    }
+    disable() {
+        this._isEnabled = false;
+    }
+    isEnabled() {
+        return this._isEnabled;
+    }
+    hasPendingUpdates() {
+        return this._pendingUpdate != null;
+    }
+}
+function mergeUpdates(base, next) {
+    const addedIDs = new Set();
+    const deletedIDs = new Set();
+    const moduleMap = new Map();
+    // Fill in the temporary maps and sets from both updates in their order.
+    applyUpdateLocally(base);
+    applyUpdateLocally(next);
+    function applyUpdateLocally(update) {
+        update.deleted.forEach((id) => {
+            if (addedIDs.has(id)) {
+                addedIDs.delete(id);
+            }
+            else {
+                deletedIDs.add(id);
+            }
+            moduleMap.delete(id);
+        });
+        update.added.forEach((item) => {
+            const id = item.module[0];
+            if (deletedIDs.has(id)) {
+                deletedIDs.delete(id);
+            }
+            else {
+                addedIDs.add(id);
+            }
+            moduleMap.set(id, item);
+        });
+        update.modified.forEach((item) => {
+            const id = item.module[0];
+            moduleMap.set(id, item);
+        });
+    }
+    // Now reconstruct a unified update from our in-memory maps and sets.
+    // Applying it should be equivalent to applying both of them individually.
+    const result = {
+        isInitialUpdate: next.isInitialUpdate,
+        revisionId: next.revisionId,
+        added: [],
+        modified: [],
+        deleted: [],
+    };
+    deletedIDs.forEach((id) => {
+        result.deleted.push(id);
+    });
+    moduleMap.forEach((item, id) => {
+        if (deletedIDs.has(id)) {
+            return;
+        }
+        if (addedIDs.has(id)) {
+            result.added.push(item);
+        }
+        else {
+            result.modified.push(item);
+        }
+    });
+    return result;
+}
+function createNodeFastRefresh({ onReload }) {
+    // This needs to run before the renderer initializes.
+    const ReactRefreshRuntime = require('react-refresh/runtime');
+    ReactRefreshRuntime.injectIntoGlobalHook(global);
+    const Refresh = {
+        performFullRefresh: onReload,
+        createSignatureFunctionForTransform: ReactRefreshRuntime.createSignatureFunctionForTransform,
+        isLikelyComponentType: ReactRefreshRuntime.isLikelyComponentType,
+        getFamilyByType: ReactRefreshRuntime.getFamilyByType,
+        register: ReactRefreshRuntime.register,
+        performReactRefresh() {
+            //   if (ReactRefreshRuntime.hasUnrecoverableErrors()) {
+            onReload();
+            //     return;
+            //   }
+            //   ReactRefreshRuntime.performReactRefresh();
+        },
+    };
+    // The metro require polyfill can not have dependencies (applies for all polyfills).
+    // Expose `Refresh` by assigning it to global to make it available in the polyfill.
+    globalThis[(globalThis.__METRO_GLOBAL_PREFIX__ || '') + '__ReactRefresh'] = Refresh;
+}
+exports.createNodeFastRefresh = createNodeFastRefresh;
 //# sourceMappingURL=HMRClientRSC.js.map

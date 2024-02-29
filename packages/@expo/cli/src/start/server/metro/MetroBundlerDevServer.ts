@@ -73,6 +73,8 @@ import {
 import { prependMiddleware } from '../middleware/mutations';
 import { ServerNext, ServerRequest, ServerResponse } from '../middleware/server.types';
 import { startTypescriptTypeGenerationAsync } from '../type-generation/startTypescriptTypeGeneration';
+
+import { HMRClient, createNodeFastRefresh } from './ssrHmrClient';
 export type ExpoRouterRuntimeManifest = Awaited<
   ReturnType<typeof import('expo-router/build/static/renderStaticContent').getManifest>
 >;
@@ -702,6 +704,45 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     };
   }
 
+  private setupHmr(url: URL) {
+    const onReload = () => {
+      // Send reload command to client from Fast Refresh code.
+      debug('[CLI]: Reload RSC');
+
+      this.broadcastMessage('sendDevCommand', {
+        name: 'rsc-reload',
+        // TODO: Target only certain platforms
+        // platform,
+      });
+    };
+
+    if (HMRClient.isSetup()) {
+      // console.log('[CLI]: register extra bundle URL:', url.toString());
+      // TODO: Do we need to dedupe URLs?
+      HMRClient.registerBundle(url.toString());
+    } else {
+      // TODO: Get platform from the server.
+      // createNodeFastRefresh({
+      //   onReload,
+      // });
+
+      HMRClient.setup({
+        isEnabled: true,
+        url,
+        onReload,
+        // onFullReload: () => {
+        //   this.broadcastMessage('reload');
+        // },
+        onError(error) {
+          // console.log('[CLI]:', 'onError', error);
+          // Do nothing and reload.
+          // TODO: If we handle this better it could result in faster error feedback.
+          onReload();
+        },
+      });
+    }
+  }
+
   async renderRscToReadableStream({
     route,
     searchParams,
@@ -732,7 +773,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       filename: serverUrl,
       fn: {
         renderRsc,
-        setupHmr,
+        // setupHmr,
         // renderRouteWithContextKey, getRouteNodeForPathname
       },
     } = await this.ssrLoadModuleAndHmrEntry<
@@ -744,7 +785,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       platform,
     });
 
-    console.log('>', route, platform);
+    console.log('>', route, platform, serverUrl);
 
     // const routeNode = await getRouteNodeForPathname(route);
 
@@ -835,19 +876,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
 
       // return pipe;
     } else {
-      setupHmr({
-        serverUrl: new URL(serverUrl),
-        onReload: (...args: any[]) => {
-          // Send reload command to client from Fast Refresh code.
-          debug('[CLI]: Reload RSC:', args);
-
-          // TODO: Target only certain platforms
-          this.broadcastMessage('sendDevCommand', {
-            name: 'rsc-reload',
-            platform,
-          });
-        },
-      });
+      this.setupHmr(new URL(serverUrl));
 
       const pipe = await renderRsc({
         // isDev: mode === 'development',

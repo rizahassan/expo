@@ -9,20 +9,23 @@
  * https://github.com/facebook/react-native/blob/086714b02b0fb838dee5a66c5bcefe73b53cf3df/Libraries/Utilities/HMRClient.js
  */
 type LogLevel = 'trace' | 'info' | 'warn' | 'error' | 'log' | 'group' | 'groupCollapsed' | 'groupEnd' | 'debug';
-export type HMRClientNativeInterface = {
-    enable(): void;
-    disable(): void;
-    registerBundle(requestUrl: string): void;
-    log(level: LogLevel, data: any[]): void;
-    setup(props: {
-        isEnabled: boolean;
-        onError?: (error: Error) => void;
-    }): void;
-};
 /**
  * HMR Client that receives from the server HMR updates and propagates them
  * runtime to reflects those changes.
  */
-declare const HMRClient: HMRClientNativeInterface;
+declare const HMRClient: {
+    enable(): void;
+    disable(): void;
+    registerBundle(requestUrl: string): void;
+    log(level: LogLevel, data: any[]): void;
+    setup({ isEnabled, url, onError, }: {
+        isEnabled: boolean;
+        url: URL;
+        onError?: ((error: Error) => void) | undefined;
+    }): void;
+};
 export default HMRClient;
+export declare function createNodeFastRefresh({ onReload }: {
+    onReload: any;
+}): void;
 //# sourceMappingURL=HMRClientRSC.d.ts.map

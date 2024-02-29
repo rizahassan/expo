@@ -12,6 +12,10 @@ export interface RenderContext<T = unknown> {
 export declare const fileURLToFilePath: (fileURL: string) => string;
 export declare function getRouteNodeForPathname(pathname: string): Promise<import("../getServerManifest").ExpoRouterServerManifestV1Route<string>>;
 type ResolvedConfig = any;
+export declare function setupHmr({ serverUrl, onReload }: {
+    serverUrl: URL;
+    onReload: () => void;
+}): void;
 export declare function renderRsc(opts: {
     config: ResolvedConfig;
     input: string;

@@ -195,6 +195,25 @@ const equalRouteProps = (a: RouteProps, b: RouteProps) => {
 };
 
 function InnerRouter(props) {
+  // TODO: strip when "is exporting".
+  if (process.env.NODE_ENV === 'development') {
+    const refetchRoute = () => {
+      const loc = parseLocation();
+      const input = getInputString(loc.path);
+      refetch(input, loc.searchParams);
+    };
+    globalThis.__WAKU_RSC_RELOAD_LISTENERS__ ||= [];
+    const index = globalThis.__WAKU_RSC_RELOAD_LISTENERS__.indexOf(
+      globalThis.__WAKU_REFETCH_ROUTE__
+    );
+    if (index !== -1) {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.splice(index, 1, refetchRoute);
+    } else {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.unshift(refetchRoute);
+    }
+    globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
+  }
+
   const refetch = useRefetch();
 
   const [loc, setLoc] = useState(parseLocation);

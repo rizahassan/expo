@@ -729,9 +729,10 @@ export class MetroBundlerDevServer extends BundlerDevServer {
 
     // TODO: Extract CSS Modules / Assets from the bundler process
     const {
-      // filename: serverUrl,
+      filename: serverUrl,
       fn: {
         renderRsc,
+        setupHmr,
         // renderRouteWithContextKey, getRouteNodeForPathname
       },
     } = await this.ssrLoadModuleAndHmrEntry<
@@ -834,6 +835,20 @@ export class MetroBundlerDevServer extends BundlerDevServer {
 
       // return pipe;
     } else {
+      setupHmr({
+        serverUrl: new URL(serverUrl),
+        onReload: (...args: any[]) => {
+          // Send reload command to client from Fast Refresh code.
+          debug('[CLI]: Reload RSC:', args);
+
+          // TODO: Target only certain platforms
+          this.broadcastMessage('sendDevCommand', {
+            name: 'rsc-reload',
+            platform,
+          });
+        },
+      });
+
       const pipe = await renderRsc({
         // isDev: mode === 'development',
 

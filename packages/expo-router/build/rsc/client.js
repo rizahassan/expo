@@ -88,6 +88,23 @@ const mergeElements = (a, b) => {
 };
 const fetchCache = [];
 const fetchRSC = (input, searchParamsString, setElements, cache = fetchCache) => {
+    // TODO: strip when "is exporting".
+    if (process.env.NODE_ENV === 'development') {
+        const refetchRsc = () => {
+            cache.splice(0);
+            const data = (0, exports.fetchRSC)(input, searchParamsString, setElements, cache);
+            setElements(data);
+        };
+        globalThis.__WAKU_RSC_RELOAD_LISTENERS__ ||= [];
+        const index = globalThis.__WAKU_RSC_RELOAD_LISTENERS__.indexOf(globalThis.__WAKU_REFETCH_RSC__);
+        if (index !== -1) {
+            globalThis.__WAKU_RSC_RELOAD_LISTENERS__.splice(index, 1, refetchRsc);
+        }
+        else {
+            globalThis.__WAKU_RSC_RELOAD_LISTENERS__.push(refetchRsc);
+        }
+        globalThis.__WAKU_REFETCH_RSC__ = refetchRsc;
+    }
     let entry = cache[0];
     if (entry && entry[0] === input && entry[1] === searchParamsString) {
         entry[2] = setElements;

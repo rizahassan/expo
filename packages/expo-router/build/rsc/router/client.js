@@ -128,6 +128,23 @@ const equalRouteProps = (a, b) => {
     return true;
 };
 function InnerRouter(props) {
+    // TODO: strip when "is exporting".
+    if (process.env.NODE_ENV === 'development') {
+        const refetchRoute = () => {
+            const loc = parseLocation();
+            const input = (0, common_js_1.getInputString)(loc.path);
+            refetch(input, loc.searchParams);
+        };
+        globalThis.__WAKU_RSC_RELOAD_LISTENERS__ ||= [];
+        const index = globalThis.__WAKU_RSC_RELOAD_LISTENERS__.indexOf(globalThis.__WAKU_REFETCH_ROUTE__);
+        if (index !== -1) {
+            globalThis.__WAKU_RSC_RELOAD_LISTENERS__.splice(index, 1, refetchRoute);
+        }
+        else {
+            globalThis.__WAKU_RSC_RELOAD_LISTENERS__.unshift(refetchRoute);
+        }
+        globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
+    }
     const refetch = (0, client_js_1.useRefetch)();
     const [loc, setLoc] = (0, react_1.useState)(parseLocation);
     const componentIds = (0, common_js_1.getComponentIds)(loc.path);

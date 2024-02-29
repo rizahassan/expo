@@ -6,7 +6,12 @@ import { View, Switch, TextInput, ScrollView, Text } from 'react-native';
 
 export const greet = (name: string) => {
   return (
-    <View>
+    <View style={{ borderWidth: 1, padding: 4, margin: 4, gap: 8 }}>
+      <View>
+        <Text style={{}}>Server Action</Text>
+        <Text>[Env] Platform = {OS}</Text>
+        <Text>[Param] name = {name}</Text>
+      </View>
       <Text style={{ color: 'darkcyan' }}>
         Hello {name} from {OS} Expo Router server!
       </Text>

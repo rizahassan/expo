@@ -9,7 +9,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBuildConfig = exports.renderRsc = exports.getRouteNodeForPathname = exports.fileURLToFilePath = void 0;
+exports.getBuildConfig = exports.renderRsc = exports.setupHmr = exports.getRouteNodeForPathname = exports.fileURLToFilePath = void 0;
 const stream_1 = require("@remix-run/node/dist/stream");
 const chalk_1 = __importDefault(require("chalk"));
 const server_edge_1 = require("react-server-dom-webpack/server.edge");
@@ -45,6 +45,27 @@ async function getRouteNodeForPathname(pathname) {
     return matchedNode;
 }
 exports.getRouteNodeForPathname = getRouteNodeForPathname;
+function setupHmr({ serverUrl, onReload }) {
+    const HMRClient = require('@expo/metro-runtime/build/HMRClientRSC')
+        .default;
+    const { createNodeFastRefresh } = require('@expo/metro-runtime/build/nodeFastRefresh');
+    // Make the URL for this file accessible so we can register it as an HMR client entry for RSC HMR.
+    globalThis.__DEV_SERVER_URL__ = serverUrl;
+    // Make the WebSocket constructor available to RSC HMR.
+    global.WebSocket = require('ws').WebSocket;
+    createNodeFastRefresh({
+        onReload,
+    });
+    HMRClient.setup({
+        isEnabled: true,
+        onError(error) {
+            // Do nothing and reload.
+            // TODO: If we handle this better it could result in faster error feedback.
+            onReload();
+        },
+    });
+}
+exports.setupHmr = setupHmr;
 async function renderRsc(opts
 // moduleMap: WebpackManifest
 ) {

@@ -110,6 +110,23 @@ export const fetchRSC = (
   setElements: SetElements,
   cache = fetchCache
 ): Elements => {
+  // TODO: strip when "is exporting".
+  if (process.env.NODE_ENV === 'development') {
+    const refetchRsc = () => {
+      cache.splice(0);
+      const data = fetchRSC(input, searchParamsString, setElements, cache);
+      setElements(data);
+    };
+    globalThis.__WAKU_RSC_RELOAD_LISTENERS__ ||= [];
+    const index = globalThis.__WAKU_RSC_RELOAD_LISTENERS__.indexOf(globalThis.__WAKU_REFETCH_RSC__);
+    if (index !== -1) {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.splice(index, 1, refetchRsc);
+    } else {
+      globalThis.__WAKU_RSC_RELOAD_LISTENERS__.push(refetchRsc);
+    }
+    globalThis.__WAKU_REFETCH_RSC__ = refetchRsc;
+  }
+
   let entry: CacheEntry | undefined = cache[0];
   if (entry && entry[0] === input && entry[1] === searchParamsString) {
     entry[2] = setElements;
@@ -117,14 +134,17 @@ export const fetchRSC = (
   }
   const options = {
     async callServer(actionId: string, args: unknown[]) {
-      const response = fetch(getAdjustedFilePath(BASE_PATH + encodeInput(encodeURIComponent(actionId))), {
-        method: 'POST',
-        reactNative: { textStreaming: true },
-        body: await encodeReply(args),
-        headers: {
-          'expo-platform': OS,
-        },
-      });
+      const response = fetch(
+        getAdjustedFilePath(BASE_PATH + encodeInput(encodeURIComponent(actionId))),
+        {
+          method: 'POST',
+          reactNative: { textStreaming: true },
+          body: await encodeReply(args),
+          headers: {
+            'expo-platform': OS,
+          },
+        }
+      );
       const data = createFromFetch<Awaited<Elements>>(checkStatus(response), options);
       const setElements = entry![2];
       startTransition(() => {
@@ -171,7 +191,9 @@ function getAdjustedFilePath(path: string): string {
 
 export const prefetchRSC = (input: string, searchParamsString: string): void => {
   const prefetched = ((globalThis as any).__WAKU_PREFETCHED__ ||= {});
-  const url = getAdjustedFilePath(BASE_PATH + encodeInput(input) + (searchParamsString ? '?' + searchParamsString : ''));
+  const url = getAdjustedFilePath(
+    BASE_PATH + encodeInput(input) + (searchParamsString ? '?' + searchParamsString : '')
+  );
   if (!(url in prefetched)) {
     prefetched[url] = fetch(url, {
       reactNative: { textStreaming: true },

@@ -7,7 +7,7 @@ import { useState, useTransition } from 'react';
 
 export const Counter = ({ greet }: { greet: (name: string) => Promise<ReactElement> }) => {
   const [count, setCount] = useState(0);
-  const [text, setText] = useState<string | Promise<ReactElement>>('');
+  const [text, setText] = useState<Promise<ReactElement>>();
   const [isPending, startTransition] = useTransition();
   const handleClick = () => {
     startTransition(() => {
@@ -29,7 +29,8 @@ export const Counter = ({ greet }: { greet: (name: string) => Promise<ReactEleme
       <Button onPress={handleClick} title={`Invoke: greet("c=" + ${count})`} />
       <Text>{`${isPending ? 'Transition Pending...' : ''}`}</Text>
 
-      <Text>Server Result → {text as string}</Text>
+      <Text>Server Result → </Text>
+      {text}
     </View>
   );
 };

@@ -5,16 +5,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * Based on this but with web support:
+ * Based on this but with SSR support:
  * https://github.com/facebook/react-native/blob/086714b02b0fb838dee5a66c5bcefe73b53cf3df/Libraries/Utilities/HMRClient.js
  */
-// import prettyFormat, { plugins } from 'pretty-format';
 
-// import LoadingView from './LoadingView';
-// import LogBox from './error-overlay/LogBox';
-// import getDevServer from './getDevServer';
-
-// const MetroHMRClient = require('metro-runtime/src/modules/HMRClient');
 const pendingEntryPoints: string[] = [];
 
 type HMRClientType = {
@@ -29,18 +23,6 @@ let hmrClient: HMRClientType | null = null;
 let hmrUnavailableReason: string | null = null;
 let currentCompileErrorMessage: string | null = null;
 let didConnect: boolean = false;
-const pendingLogs: [LogLevel, any[]][] = [];
-
-type LogLevel =
-  | 'trace'
-  | 'info'
-  | 'warn'
-  | 'error'
-  | 'log'
-  | 'group'
-  | 'groupCollapsed'
-  | 'groupEnd'
-  | 'debug';
 
 function assert(foo: any, msg: string): asserts foo {
   if (!foo) throw new Error(msg);
@@ -96,8 +78,6 @@ export const HMRClient = {
     pendingEntryPoints.push(requestUrl);
     this._registerBundleEntryPoints(hmrClient);
   },
-
-  log(level: LogLevel, data: any[]) {},
 
   isSetup() {
     return !!hmrClient;
@@ -199,7 +179,6 @@ To reconnect:
     }
 
     this._registerBundleEntryPoints(hmrClient);
-    flushEarlyLogs();
   },
 
   _registerBundleEntryPoints(client: HMRClientType | null) {
@@ -238,16 +217,6 @@ function setHMRUnavailableReason(reason: string) {
   }
 }
 
-function flushEarlyLogs() {
-  try {
-    pendingLogs.forEach(([level, data]) => {
-      HMRClient.log(level, data);
-    });
-  } finally {
-    pendingLogs.length = 0;
-  }
-}
-
 function showCompileError({ onError }: { onError?: (error: Error) => void } = {}) {
   if (currentCompileErrorMessage === null) {
     return;
@@ -272,14 +241,14 @@ function showCompileError({ onError }: { onError?: (error: Error) => void } = {}
 import { WebSocket } from 'ws';
 
 const EventEmitter = require('metro-runtime/src/modules/vendor/eventemitter3');
-const inject = ({ module: [id, code], sourceURL }) => {
-  // eslint-disable-next-line no-eval
-  eval(code);
-};
-const injectUpdate = (update) => {
-  update.added.forEach(inject);
-  update.modified.forEach(inject);
-};
+// const inject = ({ module: [id, code], sourceURL }) => {
+//   // eslint-disable-next-line no-eval
+//   eval(code);
+// };
+// const injectUpdate = (update) => {
+//   update.added.forEach(inject);
+//   update.modified.forEach(inject);
+// };
 class MetroHMRClient extends EventEmitter {
   _isEnabled = false;
   _pendingUpdate: null | {
@@ -373,7 +342,7 @@ class MetroHMRClient extends EventEmitter {
     const update = this._pendingUpdate;
     this._pendingUpdate = null;
     if (update != null) {
-      injectUpdate(update);
+      //   injectUpdate(update);
     }
   }
   disable() {
@@ -441,36 +410,4 @@ function mergeUpdates(base, next) {
     }
   });
   return result;
-}
-
-export function createNodeFastRefresh({ onReload }: { onReload }) {
-  // This needs to run before the renderer initializes.
-
-  const ReactRefreshRuntime = require('react-refresh/runtime');
-  ReactRefreshRuntime.injectIntoGlobalHook(global);
-
-  const Refresh = {
-    performFullRefresh: onReload,
-
-    createSignatureFunctionForTransform: ReactRefreshRuntime.createSignatureFunctionForTransform,
-
-    isLikelyComponentType: ReactRefreshRuntime.isLikelyComponentType,
-
-    getFamilyByType: ReactRefreshRuntime.getFamilyByType,
-
-    register: ReactRefreshRuntime.register,
-
-    performReactRefresh() {
-      console.log('[CLI]:', 'performReactRefresh');
-      //   if (ReactRefreshRuntime.hasUnrecoverableErrors()) {
-      onReload();
-      //     return;
-      //   }
-      //   ReactRefreshRuntime.performReactRefresh();
-    },
-  };
-
-  // The metro require polyfill can not have dependencies (applies for all polyfills).
-  // Expose `Refresh` by assigning it to global to make it available in the polyfill.
-  globalThis[(globalThis.__METRO_GLOBAL_PREFIX__ || '') + '__ReactRefresh'] = Refresh;
 }

@@ -195,6 +195,11 @@ const equalRouteProps = (a: RouteProps, b: RouteProps) => {
 };
 
 function InnerRouter(props) {
+  const refetch = useRefetch();
+
+  const [loc, setLoc] = useState(parseLocation);
+  const componentIds = getComponentIds(loc.path);
+
   // TODO: strip when "is exporting".
   if (process.env.NODE_ENV === 'development') {
     const refetchRoute = () => {
@@ -213,11 +218,6 @@ function InnerRouter(props) {
     }
     globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
   }
-
-  const refetch = useRefetch();
-
-  const [loc, setLoc] = useState(parseLocation);
-  const componentIds = getComponentIds(loc.path);
 
   const [cached, setCached] = useState<Record<string, RouteProps>>(() => {
     return Object.fromEntries(componentIds.map((id) => [id, loc]));

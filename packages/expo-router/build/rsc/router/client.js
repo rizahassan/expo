@@ -128,6 +128,9 @@ const equalRouteProps = (a, b) => {
     return true;
 };
 function InnerRouter(props) {
+    const refetch = (0, client_js_1.useRefetch)();
+    const [loc, setLoc] = (0, react_1.useState)(parseLocation);
+    const componentIds = (0, common_js_1.getComponentIds)(loc.path);
     // TODO: strip when "is exporting".
     if (process.env.NODE_ENV === 'development') {
         const refetchRoute = () => {
@@ -145,9 +148,6 @@ function InnerRouter(props) {
         }
         globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
     }
-    const refetch = (0, client_js_1.useRefetch)();
-    const [loc, setLoc] = (0, react_1.useState)(parseLocation);
-    const componentIds = (0, common_js_1.getComponentIds)(loc.path);
     const [cached, setCached] = (0, react_1.useState)(() => {
         return Object.fromEntries(componentIds.map((id) => [id, loc]));
     });

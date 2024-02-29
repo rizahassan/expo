@@ -74,7 +74,7 @@ import { prependMiddleware } from '../middleware/mutations';
 import { ServerNext, ServerRequest, ServerResponse } from '../middleware/server.types';
 import { startTypescriptTypeGenerationAsync } from '../type-generation/startTypescriptTypeGeneration';
 
-import { HMRClient, createNodeFastRefresh } from './ssrHmrClient';
+import { HMRClient } from './ssrHmrClient';
 export type ExpoRouterRuntimeManifest = Awaited<
   ReturnType<typeof import('expo-router/build/static/renderStaticContent').getManifest>
 >;
@@ -721,11 +721,6 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       // TODO: Do we need to dedupe URLs?
       HMRClient.registerBundle(url.toString());
     } else {
-      // TODO: Get platform from the server.
-      // createNodeFastRefresh({
-      //   onReload,
-      // });
-
       HMRClient.setup({
         isEnabled: true,
         url,

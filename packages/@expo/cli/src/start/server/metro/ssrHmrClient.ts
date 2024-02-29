@@ -241,14 +241,7 @@ function showCompileError({ onError }: { onError?: (error: Error) => void } = {}
 import { WebSocket } from 'ws';
 
 const EventEmitter = require('metro-runtime/src/modules/vendor/eventemitter3');
-// const inject = ({ module: [id, code], sourceURL }) => {
-//   // eslint-disable-next-line no-eval
-//   eval(code);
-// };
-// const injectUpdate = (update) => {
-//   update.added.forEach(inject);
-//   update.modified.forEach(inject);
-// };
+
 class MetroHMRClient extends EventEmitter {
   _isEnabled = false;
   _pendingUpdate: null | {
@@ -280,7 +273,7 @@ class MetroHMRClient extends EventEmitter {
     };
     this._ws.onmessage = (message) => {
       const data = JSON.parse(String(message.data));
-      console.log('[server] on message:', data);
+      //   console.log('[server] on message:', data);
       switch (data.type) {
         case 'bundle-registered':
           this.emit('bundle-registered');
@@ -307,7 +300,6 @@ class MetroHMRClient extends EventEmitter {
     this.on('update', (update) => {
       if (this._isEnabled) {
         // NOTE: Disable injection for now since the requests just trigger a new bundle with a delta index.
-        // injectUpdate(update);
       } else if (this._pendingUpdate == null) {
         this._pendingUpdate = update;
       } else {
@@ -342,7 +334,6 @@ class MetroHMRClient extends EventEmitter {
     const update = this._pendingUpdate;
     this._pendingUpdate = null;
     if (update != null) {
-      //   injectUpdate(update);
     }
   }
   disable() {

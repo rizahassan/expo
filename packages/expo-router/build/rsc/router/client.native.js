@@ -89,6 +89,7 @@ function Link({ to, children, pending, notPending, unstable_prefetchOnEnter, ...
         ...props,
         // href: to,
         onPress: onClick,
+        onPressIn: onMouseEnter,
         // onMouseEnter
     }, children);
     if (isPending && pending !== undefined) {

@@ -155,6 +155,7 @@ export function Link({
       ...props,
       // href: to,
       onPress: onClick,
+      onPressIn: onMouseEnter,
       // onMouseEnter
     },
     children

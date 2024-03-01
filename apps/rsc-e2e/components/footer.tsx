@@ -1,5 +1,5 @@
 'use client';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ComponentProps } from 'react';
@@ -26,7 +26,7 @@ export function Footer({
       }}>
       {items.map((item, index) => (
         <View key={index} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Link to={item.href}>
+          <Link to={item.href} unstable_prefetchOnEnter>
             <MaterialIcons
               name={item.icon}
               size={24}
@@ -38,3 +38,5 @@ export function Footer({
     </View>
   );
 }
+
+// error client components

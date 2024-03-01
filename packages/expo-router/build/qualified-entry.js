@@ -1,4 +1,6 @@
 "use strict";
+// import { enableScreens, NativeScreen } from 'react-native-screens';
+// enableScreens(false);
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -33,7 +35,10 @@ function RootErrorBoundary(props) {
 // Must be exported or Fast Refresh won't update the context
 function App() {
     return (<WindowLocationContext_1.LocationContext>
-      <react_native_safe_area_context_1.SafeAreaProvider>
+      <react_native_safe_area_context_1.SafeAreaProvider initialMetrics={{
+            frame: { x: 0, y: 0, width: 0, height: 0 },
+            insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        }}>
         <Try_1.Try catch={RootErrorBoundary}>
           <client_1.Router />
         </Try_1.Try>

@@ -13,6 +13,7 @@ export function Footer({
   items: { icon: ComponentProps<typeof MaterialIcons>['name']; href: string }[];
 }) {
   const { bottom } = useSafeAreaInsets();
+
   return (
     <View
       style={{

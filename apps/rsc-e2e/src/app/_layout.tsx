@@ -1,9 +1,12 @@
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 import { Link } from 'expo-router/build/rsc/router/client';
+import { Children } from 'expo-router/build/rsc/client';
 import { ActivityIndicator, Text, View } from 'react-native';
 import SafeAreaView from '@/components/safe-area';
 import { Footer } from '@/components/footer';
+
+import { enableScreens, NativeScreen } from 'react-native-screens';
 
 const HomeLayout = ({
   children,
@@ -23,8 +26,11 @@ const HomeLayout = ({
       style={{ backgroundColor: '#191A20', flex: 1, gap: 8 }}>
       {/* <title>Concurrent Router</title> */}
       <View style={{ flex: 1, padding: 12 }} testID="layout-child-wrapper">
-        {children}
+        <Children />
       </View>
+      {/* <View style={{ flex: 1, padding: 12 }} testID="layout-child-wrapper">
+        {children}
+      </View> */}
       <Footer
         path={props.path}
         items={[

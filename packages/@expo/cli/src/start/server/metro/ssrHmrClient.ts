@@ -112,11 +112,25 @@ export const HMRClient = {
       didConnect = true;
     });
 
-    client.on('update', ({ isInitialUpdate }: { isInitialUpdate?: boolean }) => {
-      if (client.isEnabled() && !isInitialUpdate) {
-        onReload();
+    client.on(
+      'update',
+      ({
+        isInitialUpdate,
+        added,
+        modified,
+        deleted,
+      }: {
+        isInitialUpdate?: boolean;
+        added: unknown[];
+        modified: unknown[];
+        deleted: unknown[];
+      }) => {
+        const hasUpdate = added.length || modified.length || deleted.length;
+        if (client.isEnabled() && !isInitialUpdate && hasUpdate) {
+          onReload();
+        }
       }
-    });
+    );
 
     client.on('error', (data: { type: string; message: string }) => {
       if (data.type === 'GraphNotFoundError') {

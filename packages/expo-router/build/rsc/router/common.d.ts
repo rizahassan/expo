@@ -11,4 +11,5 @@ export type ShouldSkip = Record<string, {
     path?: boolean;
     keys?: string[];
 }>;
+export declare const getSkipList: (shouldSkip: ShouldSkip, componentIds: readonly string[], props: RouteProps, cached: Record<string, RouteProps>) => string[];
 //# sourceMappingURL=common.d.ts.map

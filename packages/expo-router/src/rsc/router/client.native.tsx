@@ -23,10 +23,17 @@ import type {
 
 import { Text } from 'react-native';
 
-import { getComponentIds, getInputString, PARAM_KEY_SKIP, SHOULD_SKIP_ID } from './common.js';
-import type { RouteProps, ShouldSkip } from './common.js';
+import {
+  getComponentIds,
+  getSkipList,
+  getInputString,
+  PARAM_KEY_SKIP,
+  SHOULD_SKIP_ID,
+} from './common.js';
+import type { RouteProps } from './common.js';
 import { prefetchRSC, Root, Slot, useRefetch } from '../client.js';
 import { useVirtualLocation } from './WindowLocationContext.js';
+import { useSkipMeta } from './SkipContext.js';
 
 declare global {
   interface ImportMeta {
@@ -161,42 +168,6 @@ export function Link({
   return ele;
 }
 
-const getSkipList = (
-  componentIds: readonly string[],
-  props: RouteProps,
-  cached: Record<string, RouteProps>
-): string[] => {
-  // TODO: Implement skip list somehow
-  return [];
-
-  const ele: any = document.querySelector('meta[name="expo-should-skip"]');
-  if (!ele) {
-    return [];
-  }
-  const shouldSkip: ShouldSkip = JSON.parse(ele.content);
-  return componentIds.filter((id) => {
-    const prevProps = cached[id];
-    if (!prevProps) {
-      return false;
-    }
-    const shouldCheck = shouldSkip?.[id];
-    if (!shouldCheck) {
-      return false;
-    }
-    if (shouldCheck.path && props.path !== prevProps.path) {
-      return false;
-    }
-    if (
-      shouldCheck.keys?.some(
-        (key) => props.searchParams.get(key) !== prevProps.searchParams.get(key)
-      )
-    ) {
-      return false;
-    }
-    return true;
-  });
-};
-
 const equalRouteProps = (a: RouteProps, b: RouteProps) => {
   if (a.path !== b.path) {
     return false;
@@ -214,6 +185,8 @@ const equalRouteProps = (a: RouteProps, b: RouteProps) => {
 
 function InnerRouter(props) {
   const refetch = useRefetch();
+  const { current: skipList } = useSkipMeta();
+  console.log('>skipList', skipList);
   const { setHistory } = useVirtualLocation();
   const [loc, setLoc] = useState(parseLocation);
   const componentIds = getComponentIds(loc.path);
@@ -280,7 +253,8 @@ function InnerRouter(props) {
       ) {
         return; // everything is cached
       }
-      const skip = getSkipList(componentIds, loc, cachedRef.current);
+      const skip = getSkipList(skipList, componentIds, loc, cachedRef.current);
+      console.log('[FETCH] skip', skip, skipList);
       if (componentIds.every((id) => skip.includes(id))) {
         return; // everything is skipped
       }
@@ -297,24 +271,28 @@ function InnerRouter(props) {
         ...Object.fromEntries(componentIds.flatMap((id) => (skip.includes(id) ? [] : [[id, loc]]))),
       }));
     },
-    [refetch]
+    [refetch, skipList]
   );
 
-  const prefetchLocation: PrefetchLocation = useCallback((path, searchParams) => {
-    const componentIds = getComponentIds(path);
-    const routeProps: RouteProps = { path, searchParams };
-    const skip = getSkipList(componentIds, routeProps, cachedRef.current);
-    if (componentIds.every((id) => skip.includes(id))) {
-      return; // everything is cached
-    }
-    const input = getInputString(path);
-    const searchParamsString = new URLSearchParams([
-      ...Array.from(searchParams.entries()),
-      ...skip.map((id) => [PARAM_KEY_SKIP, id]),
-    ]).toString();
-    prefetchRSC(input, searchParamsString);
-    (globalThis as any).__WAKU_ROUTER_PREFETCH__?.(path);
-  }, []);
+  const prefetchLocation: PrefetchLocation = useCallback(
+    (path, searchParams) => {
+      const componentIds = getComponentIds(path);
+      const routeProps: RouteProps = { path, searchParams };
+      const skip = getSkipList(skipList, componentIds, routeProps, cachedRef.current);
+      console.log('[FETCH] skip', skip, skipList);
+      if (componentIds.every((id) => skip.includes(id))) {
+        return; // everything is cached
+      }
+      const input = getInputString(path);
+      const searchParamsString = new URLSearchParams([
+        ...Array.from(searchParams.entries()),
+        ...skip.map((id) => [PARAM_KEY_SKIP, id]),
+      ]).toString();
+      prefetchRSC(input, searchParamsString);
+      (globalThis as any).__WAKU_ROUTER_PREFETCH__?.(path);
+    },
+    [skipList]
+  );
 
   //   useEffect(() => {
   //     const callback = () => {

@@ -31,6 +31,7 @@ export type ExpoMetroOptions = {
   inlineSourceMap?: boolean;
   rscPath?: string;
   clientBoundaries?: string[];
+  isClientBoundary?: boolean;
 
   /** List of module imports to ignore when collecting dependencies. This can be used to create externals that are left in place. */
   // ignoredModules?: string[];
@@ -150,6 +151,7 @@ export function getMetroDirectBundleOptions(
     isExporting,
     inlineSourceMap,
     clientBoundaries,
+    isClientBoundary,
     // ignoredModules,
   } = withDefaults(options);
 
@@ -200,6 +202,7 @@ export function getMetroDirectBundleOptions(
       __proto__: null,
       environment,
       exporting: isExporting,
+      clientboundary: isClientBoundary,
     },
     sourceMapUrl: fakeSourceMapUrl,
     sourceUrl: fakeSourceUrl,
@@ -249,6 +252,7 @@ export function createBundleUrlSearchParams(options: ExpoMetroOptions): URLSearc
     inlineSourceMap,
     isExporting,
     clientBoundaries,
+    isClientBoundary,
   } = withDefaults(options);
 
   const dev = String(mode !== 'production');
@@ -306,6 +310,10 @@ export function createBundleUrlSearchParams(options: ExpoMetroOptions): URLSearc
   if (environment) {
     queryParams.append('resolver.environment', environment);
     queryParams.append('transform.environment', environment);
+  }
+
+  if (isClientBoundary) {
+    queryParams.append('resolver.clientboundary', String(isClientBoundary));
   }
 
   if (isExporting) {

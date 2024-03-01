@@ -20,9 +20,16 @@ import type {
   MouseEvent,
 } from 'react';
 
-import { getComponentIds, getInputString, PARAM_KEY_SKIP, SHOULD_SKIP_ID } from './common.js';
+import {
+  getComponentIds,
+  getSkipList,
+  getInputString,
+  PARAM_KEY_SKIP,
+  SHOULD_SKIP_ID,
+} from './common.js';
 import type { RouteProps, ShouldSkip } from './common.js';
 import { prefetchRSC, Root, Slot, useRefetch } from '../client.js';
+// import { useSkipMeta } from './SkipContext.js';
 
 declare global {
   interface ImportMeta {
@@ -146,7 +153,7 @@ export function Link({
   return ele;
 }
 
-const getSkipList = (
+const getDocumentSkipList = (
   componentIds: readonly string[],
   props: RouteProps,
   cached: Record<string, RouteProps>
@@ -155,28 +162,9 @@ const getSkipList = (
   if (!ele) {
     return [];
   }
+
   const shouldSkip: ShouldSkip = JSON.parse(ele.content);
-  return componentIds.filter((id) => {
-    const prevProps = cached[id];
-    if (!prevProps) {
-      return false;
-    }
-    const shouldCheck = shouldSkip?.[id];
-    if (!shouldCheck) {
-      return false;
-    }
-    if (shouldCheck.path && props.path !== prevProps.path) {
-      return false;
-    }
-    if (
-      shouldCheck.keys?.some(
-        (key) => props.searchParams.get(key) !== prevProps.searchParams.get(key)
-      )
-    ) {
-      return false;
-    }
-    return true;
-  });
+  return getSkipList(shouldSkip, componentIds, props, cached);
 };
 
 const equalRouteProps = (a: RouteProps, b: RouteProps) => {
@@ -196,6 +184,7 @@ const equalRouteProps = (a: RouteProps, b: RouteProps) => {
 
 function InnerRouter(props) {
   const refetch = useRefetch();
+  // const { current: skipList } = useSkipMeta();
 
   const [loc, setLoc] = useState(parseLocation);
   const componentIds = getComponentIds(loc.path);
@@ -257,7 +246,8 @@ function InnerRouter(props) {
       ) {
         return; // everything is cached
       }
-      const skip = getSkipList(componentIds, loc, cachedRef.current);
+      // const skip = getSkipList(skipList, componentIds, loc, cachedRef.current);
+      const skip = getDocumentSkipList(componentIds, loc, cachedRef.current);
       if (componentIds.every((id) => skip.includes(id))) {
         return; // everything is skipped
       }
@@ -280,7 +270,8 @@ function InnerRouter(props) {
   const prefetchLocation: PrefetchLocation = useCallback((path, searchParams) => {
     const componentIds = getComponentIds(path);
     const routeProps: RouteProps = { path, searchParams };
-    const skip = getSkipList(componentIds, routeProps, cachedRef.current);
+    // const skip = getSkipList(skipList, componentIds, routeProps, cachedRef.current);
+    const skip = getDocumentSkipList(componentIds, routeProps, cachedRef.current);
     if (componentIds.every((id) => skip.includes(id))) {
       return; // everything is cached
     }

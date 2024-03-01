@@ -91,29 +91,13 @@ function Link({ to, children, pending, notPending, unstable_prefetchOnEnter, ...
     return ele;
 }
 exports.Link = Link;
-const getSkipList = (componentIds, props, cached) => {
+const getDocumentSkipList = (componentIds, props, cached) => {
     const ele = document.querySelector('meta[name="expo-should-skip"]');
     if (!ele) {
         return [];
     }
     const shouldSkip = JSON.parse(ele.content);
-    return componentIds.filter((id) => {
-        const prevProps = cached[id];
-        if (!prevProps) {
-            return false;
-        }
-        const shouldCheck = shouldSkip?.[id];
-        if (!shouldCheck) {
-            return false;
-        }
-        if (shouldCheck.path && props.path !== prevProps.path) {
-            return false;
-        }
-        if (shouldCheck.keys?.some((key) => props.searchParams.get(key) !== prevProps.searchParams.get(key))) {
-            return false;
-        }
-        return true;
-    });
+    return (0, common_js_1.getSkipList)(shouldSkip, componentIds, props, cached);
 };
 const equalRouteProps = (a, b) => {
     if (a.path !== b.path) {
@@ -129,6 +113,7 @@ const equalRouteProps = (a, b) => {
 };
 function InnerRouter(props) {
     const refetch = (0, client_js_1.useRefetch)();
+    // const { current: skipList } = useSkipMeta();
     const [loc, setLoc] = (0, react_1.useState)(parseLocation);
     const componentIds = (0, common_js_1.getComponentIds)(loc.path);
     // TODO: strip when "is exporting".
@@ -182,7 +167,8 @@ function InnerRouter(props) {
             })) {
             return; // everything is cached
         }
-        const skip = getSkipList(componentIds, loc, cachedRef.current);
+        // const skip = getSkipList(skipList, componentIds, loc, cachedRef.current);
+        const skip = getDocumentSkipList(componentIds, loc, cachedRef.current);
         if (componentIds.every((id) => skip.includes(id))) {
             return; // everything is skipped
         }
@@ -199,7 +185,8 @@ function InnerRouter(props) {
     const prefetchLocation = (0, react_1.useCallback)((path, searchParams) => {
         const componentIds = (0, common_js_1.getComponentIds)(path);
         const routeProps = { path, searchParams };
-        const skip = getSkipList(componentIds, routeProps, cachedRef.current);
+        // const skip = getSkipList(skipList, componentIds, routeProps, cachedRef.current);
+        const skip = getDocumentSkipList(componentIds, routeProps, cachedRef.current);
         if (componentIds.every((id) => skip.includes(id))) {
             return; // everything is cached
         }

@@ -30,7 +30,7 @@ exports.renderRootComponent = void 0;
 const expo_1 = require("expo");
 const os_1 = __importDefault(require("expo-router/os"));
 const SplashScreen = __importStar(require("expo-splash-screen"));
-const react_1 = __importDefault(require("react"));
+const React = __importStar(require("react"));
 // import { View } from 'react-native';
 function isBaseObject(obj) {
     if (Object.prototype.toString.call(obj) !== '[object Object]') {
@@ -76,7 +76,7 @@ function renderRootComponent(Component) {
         setTimeout(() => {
             // SplashScreen._internal_preventAutoHideAsync?.();
         });
-        react_1.default.startTransition(() => {
+        React.startTransition(() => {
             if (process.env.NODE_ENV !== 'production') {
                 const { withErrorOverlay } = require('@expo/metro-runtime/error-overlay');
                 (0, expo_1.registerRootComponent)(withErrorOverlay(Component));

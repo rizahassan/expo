@@ -1,4 +1,3 @@
-import OS from 'expo-router/os';
 import { createElement, Fragment } from 'react';
 import type { FunctionComponent, ReactNode } from 'react';
 
@@ -14,18 +13,7 @@ import { Children, Slot } from '../client.js';
 import { getPathMapping, PathSpec } from '../path.js';
 import type { RenderEntries, GetBuildConfig, GetSsrConfig } from '../server.js';
 import { defineEntries } from '../server.js';
-
-const ShoudSkipComponent = ({ shouldSkip }: { shouldSkip: ShouldSkip }) => {
-  // TODO: Modify the React Native renderer to support Document Metadata and other head elements
-  if (OS === 'web') {
-    return createElement('meta', {
-      name: 'expo-should-skip',
-      content: JSON.stringify(shouldSkip),
-    });
-  }
-
-  return null;
-};
+import { ShouldSkipComponent } from './should-skip';
 
 export function defineRouter(
   getPathConfig: () => Promise<Iterable<{ path: PathSpec; isStatic?: boolean }>>,
@@ -90,7 +78,7 @@ export function defineRouter(
         })
       )
     ).flat();
-    entries.push([SHOULD_SKIP_ID, createElement(ShoudSkipComponent, { shouldSkip }) as any]);
+    entries.push([SHOULD_SKIP_ID, createElement(ShouldSkipComponent, { shouldSkip }) as any]);
     return Object.fromEntries(entries);
   };
 

@@ -7,6 +7,7 @@ const react_native_1 = require("react-native");
 const common_js_1 = require("./common.js");
 const client_js_1 = require("../client.js");
 const WindowLocationContext_js_1 = require("./WindowLocationContext.js");
+const SkipContext_js_1 = require("./SkipContext.js");
 const parseLocation = () => {
     if (globalThis.__WAKU_ROUTER_404__) {
         return { path: '/404', searchParams: new URLSearchParams() };
@@ -99,32 +100,6 @@ function Link({ to, children, pending, notPending, unstable_prefetchOnEnter, ...
     return ele;
 }
 exports.Link = Link;
-const getSkipList = (componentIds, props, cached) => {
-    // TODO: Implement skip list somehow
-    return [];
-    const ele = document.querySelector('meta[name="expo-should-skip"]');
-    if (!ele) {
-        return [];
-    }
-    const shouldSkip = JSON.parse(ele.content);
-    return componentIds.filter((id) => {
-        const prevProps = cached[id];
-        if (!prevProps) {
-            return false;
-        }
-        const shouldCheck = shouldSkip?.[id];
-        if (!shouldCheck) {
-            return false;
-        }
-        if (shouldCheck.path && props.path !== prevProps.path) {
-            return false;
-        }
-        if (shouldCheck.keys?.some((key) => props.searchParams.get(key) !== prevProps.searchParams.get(key))) {
-            return false;
-        }
-        return true;
-    });
-};
 const equalRouteProps = (a, b) => {
     if (a.path !== b.path) {
         return false;
@@ -138,6 +113,12 @@ const equalRouteProps = (a, b) => {
     return true;
 };
 function InnerRouter(props) {
+    const refetch = (0, client_js_1.useRefetch)();
+    const { current: skipList } = (0, SkipContext_js_1.useSkipMeta)();
+    console.log('>skipList', skipList);
+    const { setHistory } = (0, WindowLocationContext_js_1.useVirtualLocation)();
+    const [loc, setLoc] = (0, react_1.useState)(parseLocation);
+    const componentIds = (0, common_js_1.getComponentIds)(loc.path);
     // TODO: strip when "is exporting".
     if (process.env.NODE_ENV === 'development') {
         const refetchRoute = () => {
@@ -155,10 +136,6 @@ function InnerRouter(props) {
         }
         globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
     }
-    const refetch = (0, client_js_1.useRefetch)();
-    const { setHistory } = (0, WindowLocationContext_js_1.useVirtualLocation)();
-    const [loc, setLoc] = (0, react_1.useState)(parseLocation);
-    const componentIds = (0, common_js_1.getComponentIds)(loc.path);
     const [cached, setCached] = (0, react_1.useState)(() => {
         return Object.fromEntries(componentIds.map((id) => [id, loc]));
     });
@@ -198,7 +175,8 @@ function InnerRouter(props) {
             })) {
             return; // everything is cached
         }
-        const skip = getSkipList(componentIds, loc, cachedRef.current);
+        const skip = (0, common_js_1.getSkipList)(skipList, componentIds, loc, cachedRef.current);
+        console.log('[FETCH] skip', skip, skipList);
         if (componentIds.every((id) => skip.includes(id))) {
             return; // everything is skipped
         }
@@ -211,11 +189,12 @@ function InnerRouter(props) {
             ...prev,
             ...Object.fromEntries(componentIds.flatMap((id) => (skip.includes(id) ? [] : [[id, loc]]))),
         }));
-    }, [refetch]);
+    }, [refetch, skipList]);
     const prefetchLocation = (0, react_1.useCallback)((path, searchParams) => {
         const componentIds = (0, common_js_1.getComponentIds)(path);
         const routeProps = { path, searchParams };
-        const skip = getSkipList(componentIds, routeProps, cachedRef.current);
+        const skip = (0, common_js_1.getSkipList)(skipList, componentIds, routeProps, cachedRef.current);
+        console.log('[FETCH] skip', skip, skipList);
         if (componentIds.every((id) => skip.includes(id))) {
             return; // everything is cached
         }
@@ -226,7 +205,7 @@ function InnerRouter(props) {
         ]).toString();
         (0, client_js_1.prefetchRSC)(input, searchParamsString);
         globalThis.__WAKU_ROUTER_PREFETCH__?.(path);
-    }, []);
+    }, [skipList]);
     //   useEffect(() => {
     //     const callback = () => {
     //       const loc = parseLocation();

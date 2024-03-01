@@ -261,7 +261,7 @@ export function withExtendedResolver(
   // If module should be shimmed, remap to an empty module.
   const externals: {
     match: (context: ResolutionContext, moduleName: string, platform: string | null) => boolean;
-    replace: 'empty' | 'node';
+    replace: 'empty' | 'node' | 'weak';
   }[] = [
     {
       match: (context: ResolutionContext, moduleName: string, platform: string | null) => {
@@ -299,6 +299,52 @@ export function withExtendedResolver(
         return isExternal;
       },
       replace: 'node',
+    },
+    // Externals to speed up async split chunks by extern-ing common packages that appear in the root client chunk.
+    {
+      match: (context: ResolutionContext, moduleName: string, platform: string | null) => {
+        if (
+          // Disable internal externals when exporting for production.
+          context.customResolverOptions.exporting ||
+          // These externals are only for client environments.
+          isServerEnvironment(context.customResolverOptions?.environment) ||
+          // Only enable for client boundaries
+          !context.customResolverOptions.clientboundary
+        ) {
+          return false;
+        }
+
+        const isExternal = // Extern these modules in standard Node.js environments.
+          /^(styleq(\/.+)?|deprecated-react-native-prop-types|expo-asset|invariant|nullthrows|memoize-one|@react-native\/assets-registry\/registry|@react-native\/normalize-color|react|react\/jsx-dev-runtime|scheduler|react-is|expo-modules-core|react-native|@babel\/runtime\/.+|react-dom(\/.+)?|metro-runtime(\/.+)?)$/.test(
+            moduleName
+          ) ||
+          /^react-native-web\/dist\/exports\/(Platform|NativeEventEmitter|StyleSheet|NativeModules|DeviceEventEmitter|Text|View)$/.test(
+            moduleName
+          );
+
+        if (!isExternal && (platform === 'ios' || platform === 'android')) {
+          // Auto extern all modules that are imported from React Native since RN has no tree-shaking/chill.
+          if (context.originModulePath.match(/node_modules[\\/]react-native[\\/]/)) {
+            return true;
+          }
+        }
+
+        if (isExternal) {
+          // console.log('Extern async chunk >', moduleName);
+        } else {
+          if (!moduleName.match(/^[/.]/))
+            console.log('[SKIP] Extern async chunk >', moduleName, context.originModulePath);
+        }
+        // if (!isExternal && !moduleName.match(/^[/.]/)) {
+        //   if (!hasLogged.has(moduleName)) {
+        //     console.log('>>>>', moduleName);
+        //   }
+        //   hasLogged.add(moduleName);
+        // }
+
+        return isExternal;
+      },
+      replace: 'weak',
     },
   ];
 
@@ -392,6 +438,24 @@ export function withExtendedResolver(
             return {
               type: external.replace,
             };
+          } else if (external.replace === 'weak') {
+            const contents = `module.exports=/*${moduleName}*/__r(require.resolveWeak('${moduleName}'))`;
+            const generatedModuleId = fastHashMemoized(contents);
+            const absoluteFilePath = path.join(
+              config.projectRoot,
+              METRO_EXTERNALS_FOLDER,
+              String(generatedModuleId),
+              'index.js'
+            );
+            tapVirtualModuleMemoized(absoluteFilePath, contents);
+            const redirectedModuleName = path.relative(
+              path.dirname(context.originModulePath),
+              absoluteFilePath
+            );
+            debug(
+              `Redirecting external "${moduleName}" to weak require in "${redirectedModuleName}"`
+            );
+            return getStrictResolver(context, platform)(redirectedModuleName);
           } else if (external.replace === 'node') {
             const contents = `module.exports=$$require_external('${moduleName}')`;
             const generatedModuleId = fastHashMemoized(contents);

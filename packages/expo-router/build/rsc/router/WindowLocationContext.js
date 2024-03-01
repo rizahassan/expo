@@ -72,6 +72,13 @@ const setUrl = (url) => {
     // setInitial(v);
 };
 // setUrl('/');
+// (async () => {
+//   const v = await getInitialURL();
+//   setUrl(extractExpoPathFromURL(v));
+// })();
+// addEventListener((url) => {
+//   setUrl(extractExpoPathFromURL(url));
+// });
 function LocationContext({ children }) {
     const [loaded, setLoaded] = React.useState(false);
     // const [initialUrl, setInitial] = React.useState<URL | null>(null);
@@ -80,7 +87,9 @@ function LocationContext({ children }) {
         (async () => {
             const v = await (0, linking_1.getInitialURL)();
             setUrl((0, extractPathFromURL_1.extractExpoPathFromURL)(v));
+            // startTransition(() => {
             setLoaded(true);
+            // });
         })();
         return (0, linking_1.addEventListener)((url) => {
             setUrl((0, extractPathFromURL_1.extractExpoPathFromURL)(url));

@@ -38,3 +38,40 @@ export type ShouldSkip = Record<
     keys?: string[]; // searchParams keys to compare
   }
 >;
+
+export const getSkipList = (
+  shouldSkip: ShouldSkip,
+  componentIds: readonly string[],
+  props: RouteProps,
+  cached: Record<string, RouteProps>
+): string[] => {
+  // // TODO: Implement skip list somehow
+  // return [];
+
+  // const ele: any = document.querySelector('meta[name="expo-should-skip"]');
+  // if (!ele) {
+  //   return [];
+  // }
+  // const shouldSkip: ShouldSkip = JSON.parse(ele.content);
+  return componentIds.filter((id) => {
+    const prevProps = cached[id];
+    if (!prevProps) {
+      return false;
+    }
+    const shouldCheck = shouldSkip?.[id];
+    if (!shouldCheck) {
+      return false;
+    }
+    if (shouldCheck.path && props.path !== prevProps.path) {
+      return false;
+    }
+    if (
+      shouldCheck.keys?.some(
+        (key) => props.searchParams.get(key) !== prevProps.searchParams.get(key)
+      )
+    ) {
+      return false;
+    }
+    return true;
+  });
+};

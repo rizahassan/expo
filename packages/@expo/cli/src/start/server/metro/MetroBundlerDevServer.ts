@@ -651,6 +651,9 @@ export class MetroBundlerDevServer extends BundlerDevServer {
         routerRoot,
         isExporting,
 
+        // An optimization to extern common chunks that appear in the client bundle. This is only needed for development and does nothing in production.
+        isClientBoundary: true,
+
         // TODO:
         engine: context.engine,
         bytecode: false,
@@ -1045,29 +1048,51 @@ export class MetroBundlerDevServer extends BundlerDevServer {
 
       const sendResponse = async (req: ServerRequest, res: ServerResponse) => {
         const url = new URL(req.url!, this.getDevServerUrlOrAssert());
-        const route = decodeInput(url.pathname.replace(rscPathPrefix, ''));
 
         const engine = url.searchParams.get('transform.engine');
         if (engine && !['hermes'].includes(engine)) {
-          res.statusCode = 500;
-          res.statusMessage = `Query parameter "transform.engine" is an unsupported value: ${engine}`;
-          return res.end();
+          return respond(
+            res,
+            new ExpoResponse(
+              `Query parameter "transform.engine" is an unsupported value: ${engine}`,
+              {
+                status: 500,
+                headers: {
+                  'Content-Type': 'text/plain',
+                },
+              }
+            )
+          );
         }
         const platform = url.searchParams.get('platform') ?? req.headers['expo-platform'];
         if (typeof platform !== 'string' || !platform) {
-          res.statusCode = 500;
-          res.statusMessage = 'Missing expo-platform header or platform query parameter';
-          return res.end();
+          return respond(
+            res,
+            new ExpoResponse('Missing expo-platform header or platform query parameter', {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain',
+              },
+            })
+          );
         }
         // console.log('sendResponse>', platform, url, req.headers);
         const method = req.method;
         if (!method || !['POST', 'GET'].includes(method)) {
-          res.statusCode = 405;
-          res.statusMessage = 'Method Not Allowed';
-          return res.end();
+          return respond(
+            res,
+            new ExpoResponse('Method Not Allowed', {
+              status: 405,
+              headers: {
+                'Content-Type': 'text/plain',
+              },
+            })
+          );
         }
 
         try {
+          const route = decodeInput(url.pathname.replace(rscPathPrefix, ''));
+
           if (!platform) {
             throw new Error('platform query parameter is required for RSC rendering.');
           }
@@ -1081,12 +1106,25 @@ export class MetroBundlerDevServer extends BundlerDevServer {
             engine: engine as 'hermes' | undefined,
           });
 
-          const rscResponse = new ExpoResponse(pipe);
+          const rscResponse = new ExpoResponse(pipe, {
+            headers: {
+              // Set headers for RSC
+              // 'Content-Type': 'application/json; charset=UTF-8',
+              // https://dev.to/one-beyond/react-server-components-without-any-frameworks-5a8p#:~:text=The%20RSC%20format%20is%20a,elements%20the%20client%20will%20render.
+              // 'Content-Type': 'text/x-component',
+              // The response is a streamed text file
+              'Content-Type': 'text/plain',
+            },
+          });
+          // TODO: Should we set X-Location? https://github.com/reactjs/server-components-demo/blob/95fcac10102d20722af60506af3b785b557c5fd7/server/api.server.js#L108C40-L108C48
 
-          respond(res, rscResponse);
+          // TODO: Prevent this from being appended (in RNC CLI)
+          res.removeHeader('Surrogate-Control');
+          res.removeHeader('Cache-Control');
+          res.removeHeader('Expires');
+
+          return respond(res, rscResponse);
         } catch (error: any) {
-          await logMetroError(this.projectRoot, { error });
-
           // If you get a codeFrame error during SSR like when using a Class component in React Server Components, then this
           // will throw with:
           // {
@@ -1099,20 +1137,27 @@ export class MetroBundlerDevServer extends BundlerDevServer {
           //   }
           // }
           if (error instanceof MetroNodeError) {
+            await logMetroError(this.projectRoot, { error });
+
             // Forward the Metro server to the client.
             // TODO: Cut out the middleman (metro dev server).
-            const status = 500;
-            res.writeHead(status, {
-              'Content-Type': 'application/json; charset=UTF-8',
-            });
-            return res.end(JSON.stringify(error.rawObject));
+
+            return respond(res, ExpoResponse.json(error.rawObject, { status: 500 }));
           }
 
-          res.statusCode = 500;
-          res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
+          // res.statusCode = 500;
+          // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
           const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
-          res.write(`Metro Bundler encountered an error: ` + sanitizedServerMessage);
-          res.end();
+
+          return respond(
+            res,
+            new ExpoResponse(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain',
+              },
+            })
+          );
         }
       };
 
@@ -1121,7 +1166,15 @@ export class MetroBundlerDevServer extends BundlerDevServer {
         if (!req?.url || !req.url.startsWith(rscPathPrefix)) {
           return next();
         }
-        return sendResponse(req, res);
+
+        try {
+          await sendResponse(req, res);
+        } catch (error) {
+          console.error('Error:', error);
+          res.statusCode = 500;
+          res.statusMessage = 'Internal Server Error';
+          res.end();
+        }
       });
 
       if (useServerRendering) {

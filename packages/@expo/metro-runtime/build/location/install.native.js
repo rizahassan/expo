@@ -77,8 +77,15 @@ if (manifest?.extra?.router?.origin !== false) {
     const { fetch } = require('react-native-fetch-api');
     // Polyfill native fetch to support relative URLs
     Object.defineProperty(global, 'fetch', {
+        // value: fetch,
+        value: wrapFetchWithWindowLocation(fetch),
+    });
+}
+else {
+    const { fetch } = require('react-native-fetch-api');
+    // Polyfill native fetch to support relative URLs
+    Object.defineProperty(global, 'fetch', {
         value: fetch,
-        // value: wrapFetchWithWindowLocation(fetch),
     });
 }
 //# sourceMappingURL=install.native.js.map

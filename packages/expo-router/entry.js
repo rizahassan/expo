@@ -1,6 +1,7 @@
 // `@expo/metro-runtime` MUST be the first import to ensure Fast Refresh works
 // on web.
 import '@expo/metro-runtime';
+import 'expo';
 // Hook for the virtual client modules.
 // TODO: Remove this in favor of the webpack runtime one.
 import 'expo-router/virtual-client-boundaries';

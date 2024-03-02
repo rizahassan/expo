@@ -8,27 +8,23 @@ import { wrapFetchWithWindowLocation } from '@expo/metro-runtime/build/location/
 
 // export default () => {
 [
-  require('react-native-polyfill-globals/src/base64'),
-  require('react-native-polyfill-globals/src/encoding'),
-  require('react-native-polyfill-globals/src/readable-stream'),
-  ({ polyfill() { 
+  // require('react-native-polyfill-globals/src/base64'),
+  // require('react-native-polyfill-globals/src/encoding'),
+  // require('react-native-polyfill-globals/src/readable-stream'),
+  {
+    polyfill() {
+      const { fetch, Headers, Request, Response } = require('react-native-fetch-api');
 
-
-
-    const { fetch, Headers, Request, Response } = require('react-native-fetch-api');
-
-    
-    // wrapFetchWithWindowLocation(fetch)
-    Object.defineProperty(global, 'fetch', {
-      value: wrapFetchWithWindowLocation(fetch),
-    });
-    // polyfillGlobal('fetch', () => );
-    polyfillGlobal('Headers', () => Headers);
-    polyfillGlobal('Request', () => Request);
-    polyfillGlobal('Response', () => Response);
-
-
-  }}),
+      // wrapFetchWithWindowLocation(fetch)
+      Object.defineProperty(global, 'fetch', {
+        value: wrapFetchWithWindowLocation(fetch),
+      });
+      // polyfillGlobal('fetch', () => );
+      // polyfillGlobal('Headers', () => Headers);
+      // polyfillGlobal('Request', () => Request);
+      // polyfillGlobal('Response', () => Response);
+    },
+  },
   // require('react-native-polyfill-globals/src/fetch'),
   // require('react-native-polyfill-globals/src/url'),
   // require('react-native-polyfill-globals/src/crypto'),

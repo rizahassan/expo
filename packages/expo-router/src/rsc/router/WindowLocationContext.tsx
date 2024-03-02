@@ -1,7 +1,5 @@
 // Emulates the window.location object on native.
 
-import { Linking, View, Platform } from 'react-native';
-
 // getInitialURL = () =>
 // ,
 // subscribe = (listener) => {

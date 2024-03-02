@@ -36,7 +36,6 @@ export function getInitialURL(): Promise<string | null> | string {
         const parsed = Linking.parse(url);
         // If the URL is defined (default in Expo Go dev apps) and the URL has no path:
         // `exp://192.168.87.39:19000/` then use the default `exp://192.168.87.39:19000/--/`
-        console.log('INITIAL>>', isExpoGo, url);
         if (
           parsed.path === null ||
           ['', '/'].includes(
@@ -46,11 +45,9 @@ export function getInitialURL(): Promise<string | null> | string {
             })
           )
         ) {
-          console.log('DEFAULT>>', url);
           return getRootURL();
         }
       }
-      console.log('FALLBACK>>', url);
       // The path will be nullish in bare apps when the app is launched from the home screen.
       // TODO(EvanBacon): define some policy around notifications.
       return url ?? getRootURL();

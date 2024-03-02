@@ -8,7 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.App = void 0;
 const react_1 = __importDefault(require("react"));
 const react_native_safe_area_context_1 = require("react-native-safe-area-context");
-const exports_1 = require("./exports");
+const ErrorBoundary_1 = require("./views/ErrorBoundary");
 const client_1 = require("./rsc/router/client");
 const Try_1 = require("./views/Try");
 const WindowLocationContext_1 = require("./rsc/router/WindowLocationContext");
@@ -34,7 +34,7 @@ function RootErrorBoundary(props) {
             globalThis.__WAKU_REFETCH_ROUTE__ = refetchRoute;
         }
     }, [props.error, props.retry]);
-    return <exports_1.ErrorBoundary error={props.error} retry={props.retry}/>;
+    return <ErrorBoundary_1.ErrorBoundary error={props.error} retry={props.retry}/>;
 }
 // Must be exported or Fast Refresh won't update the context
 function App() {

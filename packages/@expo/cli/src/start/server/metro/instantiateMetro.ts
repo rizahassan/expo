@@ -28,6 +28,7 @@ import { prependMiddleware, replaceMiddlewareWith } from '../middleware/mutation
 import { ServerNext, ServerRequest, ServerResponse } from '../middleware/server.types';
 import { suppressRemoteDebuggingErrorMiddleware } from '../middleware/suppressErrorMiddleware';
 import { getPlatformBundlers } from '../platformBundlers';
+import { createDevServerMiddleware } from './createCommunityDevServerMiddleware';
 
 // From expo/dev-server but with ability to use custom logger.
 type MessageSocket = {
@@ -176,23 +177,27 @@ export async function instantiateMetroAsync(
     { exp, isExporting }
   );
 
-  const { createDevServerMiddleware, securityHeadersMiddleware } =
-    require('@react-native-community/cli-server-api') as typeof import('@react-native-community/cli-server-api');
+  // const { createDevServerMiddleware, securityHeadersMiddleware } =
+  //   require('@react-native-community/cli-server-api') as typeof import('@react-native-community/cli-server-api');
 
   const { middleware, messageSocketEndpoint, eventsSocketEndpoint, websocketEndpoints } =
-    createDevServerMiddleware({
-      port: metroConfig.server.port,
-      watchFolders: metroConfig.watchFolders,
-    });
+    createDevServerMiddleware(
+      projectRoot,
+      {
+        port: metroConfig.server.port,
+        watchFolders: metroConfig.watchFolders,
+      },
+      exp
+    );
 
-  // The `securityHeadersMiddleware` does not support cross-origin requests, we replace with the enhanced version.
-  replaceMiddlewareWith(
-    middleware as ConnectServer,
-    securityHeadersMiddleware,
-    createCorsMiddleware(exp)
-  );
+  // // The `securityHeadersMiddleware` does not support cross-origin requests, we replace with the enhanced version.
+  // replaceMiddlewareWith(
+  //   middleware as ConnectServer,
+  //   securityHeadersMiddleware,
+  //   createCorsMiddleware(exp)
+  // );
 
-  prependMiddleware(middleware, suppressRemoteDebuggingErrorMiddleware);
+  // prependMiddleware(middleware, suppressRemoteDebuggingErrorMiddleware);
 
   // TODO: We can probably drop this now.
   const customEnhanceMiddleware = metroConfig.server.enhanceMiddleware;
@@ -204,12 +209,12 @@ export async function instantiateMetroAsync(
     return middleware.use(metroMiddleware);
   };
 
-  middleware.use(createDebuggerTelemetryMiddleware(projectRoot, exp));
+  // middleware.use(createDebuggerTelemetryMiddleware(projectRoot, exp));
 
   // Initialize all React Native debug features
   const { debugMiddleware, debugWebsocketEndpoints } = createDebugMiddleware(metroBundler);
   prependMiddleware(middleware, debugMiddleware);
-  middleware.use('/_expo/debugger', createJsInspectorMiddleware());
+  // middleware.use('/_expo/debugger', createJsInspectorMiddleware());
 
   const { server, metro } = await runServer(metroBundler, metroConfig, {
     // @ts-expect-error: Inconsistent `websocketEndpoints` type between metro and @react-native-community/cli-server-api

@@ -5,7 +5,7 @@ import React from 'react';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ErrorBoundary } from './exports';
+import { ErrorBoundary } from './views/ErrorBoundary';
 
 import { Router } from './rsc/router/client';
 import { ErrorBoundaryProps, Try } from './views/Try';

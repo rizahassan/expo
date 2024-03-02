@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { SplashScreen } from './Splash';
+import * as SplashScreen from 'expo-splash-screen';
 
 /** Props passed to a page's `ErrorBoundary` export. */
 export type ErrorBoundaryProps = {

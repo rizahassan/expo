@@ -1,5 +1,9 @@
-import type { ShouldSkip } from './common';
+/// <reference types="react" />
+import type { ShouldSkip } from './common.js';
 export declare const ShouldSkipComponent: ({ shouldSkip }: {
     shouldSkip: ShouldSkip;
-}) => null;
+}) => import("react").DetailedReactHTMLElement<{
+    name: string;
+    content: string;
+}, HTMLElement>;
 //# sourceMappingURL=should-skip.web.d.ts.map

@@ -1,7 +1,7 @@
 'use client';
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Router = exports.Link = exports.useLocation = exports.usePrefetchLocation = exports.useChangeLocation = void 0;
+exports.ServerRouter = exports.Router = exports.Link = exports.useLocation = exports.usePrefetchLocation = exports.useChangeLocation = void 0;
 const react_1 = require("react");
 const common_js_1 = require("./common.js");
 const client_js_1 = require("../client.js");
@@ -146,7 +146,7 @@ function InnerRouter(props) {
             url.pathname = path;
         }
         if (searchParams) {
-            url.search = '?' + searchParams.toString();
+            url.search = searchParams.toString();
         }
         if (typeof hash === 'string') {
             url.hash = hash;
@@ -218,4 +218,23 @@ function Router({ children }) {
     return (0, react_1.createElement)(client_js_1.Root, { initialInput, initialSearchParamsString }, (0, react_1.createElement)(InnerRouter, { children }));
 }
 exports.Router = Router;
+function notAvailableInServer(name) {
+    return () => {
+        throw new Error(`${name} is not in the server`);
+    };
+}
+/**
+ * ServerRouter for SSR
+ * This is not a public API.
+ */
+function ServerRouter({ children, loc, }) {
+    return (0, react_1.createElement)(react_1.Fragment, null, (0, react_1.createElement)(RouterContext.Provider, {
+        value: {
+            loc,
+            changeLocation: notAvailableInServer('changeLocation'),
+            prefetchLocation: notAvailableInServer('prefetchLocation'),
+        },
+    }, children));
+}
+exports.ServerRouter = ServerRouter;
 //# sourceMappingURL=client.js.map

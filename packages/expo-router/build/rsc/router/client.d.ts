@@ -1,10 +1,11 @@
-import type { ReactNode, AnchorHTMLAttributes, ReactElement } from 'react';
+import type { ReactNode, AnchorHTMLAttributes, ReactElement, PropsWithChildren } from 'react';
 import type { RouteProps } from './common.js';
 declare global {
     interface ImportMeta {
         readonly env: Record<string, string>;
     }
 }
+declare const parseLocation: () => RouteProps;
 type ChangeLocation = (path?: string, searchParams?: URLSearchParams, hash?: string, method?: 'pushState' | 'replaceState' | false, scrollTo?: ScrollToOptions | false) => void;
 type PrefetchLocation = (path: string, searchParams: URLSearchParams) => void;
 export declare function useChangeLocation(): ChangeLocation;
@@ -26,5 +27,14 @@ export declare function Router({ children }: {
     cache?: [([input: string, searchParamsString: string, setElements: (fn: (prev: Promise<Record<string, ReactNode>>) => Promise<Record<string, ReactNode>>) => void, elements: Promise<Record<string, ReactNode>>] | undefined)?] | undefined;
     children: ReactNode;
 }, "children">>;
+/**
+ * ServerRouter for SSR
+ * This is not a public API.
+ */
+export declare function ServerRouter({ children, loc, }: PropsWithChildren<{
+    loc: ReturnType<typeof parseLocation>;
+}>): import("react").FunctionComponentElement<{
+    children?: ReactNode;
+}>;
 export {};
 //# sourceMappingURL=client.d.ts.map

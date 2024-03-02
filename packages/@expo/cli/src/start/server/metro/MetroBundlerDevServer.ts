@@ -7,8 +7,8 @@
 import { getConfig } from '@expo/config';
 import * as runtimeEnv from '@expo/env';
 import { SerialAsset } from '@expo/metro-config/build/serializer/serializerAssets';
-import { ExpoResponse } from '@expo/server';
-import { respond } from '@expo/server/build/vendor/http';
+import { ExpoRequest, ExpoResponse } from '@expo/server';
+import { RequestHandler, convertRequest, respond } from '@expo/server/build/vendor/http';
 import { createReadableStreamFromReadable } from '@remix-run/node';
 import assert from 'assert';
 import chalk from 'chalk';
@@ -754,7 +754,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     // eslint-disable-next-line @typescript-eslint/ban-types
     method: 'POST' | 'GET';
     platform: string;
-    req?: ServerRequest;
+    req?: ExpoRequest;
     engine?: 'hermes';
   }) {
     const { baseUrl, mode, routerRoot, isExporting } = this.instanceMetroOptions;
@@ -879,7 +879,8 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       const pipe = await renderRsc({
         // isDev: mode === 'development',
 
-        body: createReadableStreamFromReadable(req!)!,
+        body: req?.body!,
+        // body: createReadableStreamFromReadable(req?.body)!,
         // body: method === 'POST' ? createReadableStreamFromReadable(req!) : null,
         entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
         searchParams,
@@ -1046,14 +1047,31 @@ export class MetroBundlerDevServer extends BundlerDevServer {
         rscPathPrefix += '/';
       }
 
-      const sendResponse = async (req: ServerRequest, res: ServerResponse) => {
-        const url = new URL(req.url!, this.getDevServerUrlOrAssert());
+      const getFullUrl = (url: string) => {
+        try {
+          return new URL(url);
+        } catch (error: any) {
+          if (error.code === 'ERR_INVALID_URL') {
+            return new URL(url, this.getDevServerUrlOrAssert());
+          }
+          throw error;
+        }
+      };
 
-        const engine = url.searchParams.get('transform.engine');
-        if (engine && !['hermes'].includes(engine)) {
-          return respond(
-            res,
-            new ExpoResponse(
+      middleware.use(
+        createRequestHandler(this.projectRoot, async (req) => {
+          const url = getFullUrl(req.url);
+          if (!url.pathname.startsWith(rscPathPrefix)) {
+            winterNext();
+          }
+          const method = req.method;
+          if (!isSupportedRequestMethod(method)) {
+            notAllowed();
+          }
+
+          const engine = url.searchParams.get('transform.engine');
+          if (engine && !['hermes'].includes(engine)) {
+            return new ExpoResponse(
               `Query parameter "transform.engine" is an unsupported value: ${engine}`,
               {
                 status: 500,
@@ -1061,52 +1079,74 @@ export class MetroBundlerDevServer extends BundlerDevServer {
                   'Content-Type': 'text/plain',
                 },
               }
-            )
-          );
-        }
-        const platform = url.searchParams.get('platform') ?? req.headers['expo-platform'];
-        if (typeof platform !== 'string' || !platform) {
-          return respond(
-            res,
-            new ExpoResponse('Missing expo-platform header or platform query parameter', {
+            );
+          }
+          const platform = url.searchParams.get('platform') ?? req.headers.get('expo-platform');
+          if (typeof platform !== 'string' || !platform) {
+            return new ExpoResponse('Missing expo-platform header or platform query parameter', {
               status: 500,
               headers: {
                 'Content-Type': 'text/plain',
               },
-            })
-          );
-        }
-        // console.log('sendResponse>', platform, url, req.headers);
-        const method = req.method;
-        if (!method || !['POST', 'GET'].includes(method)) {
-          return respond(
-            res,
-            new ExpoResponse('Method Not Allowed', {
-              status: 405,
+            });
+          }
+
+          let route: string;
+          const encodedInput = url.pathname.replace(rscPathPrefix, '');
+          try {
+            route = decodeInput(encodedInput);
+          } catch {
+            return new ExpoResponse(`Invalid encoded input: "${encodedInput}"`, {
+              status: 400,
               headers: {
                 'Content-Type': 'text/plain',
               },
-            })
-          );
-        }
-
-        try {
-          const route = decodeInput(url.pathname.replace(rscPathPrefix, ''));
-
-          if (!platform) {
-            throw new Error('platform query parameter is required for RSC rendering.');
+            });
           }
 
-          const pipe = await this.renderRscToReadableStream({
-            route,
-            searchParams: url.searchParams,
-            platform,
-            req,
-            method: method as 'POST' | 'GET',
-            engine: engine as 'hermes' | undefined,
-          });
+          let pipe: ReadableStream<any>;
+          try {
+            pipe = await this.renderRscToReadableStream({
+              route,
+              searchParams: url.searchParams,
+              platform,
+              req,
+              method,
+              engine: engine as 'hermes' | undefined,
+            });
+          } catch (error: any) {
+            // If you get a codeFrame error during SSR like when using a Class component in React Server Components, then this
+            // will throw with:
+            // {
+            //   rawObject: {
+            //     type: 'TransformError',
+            //     lineNumber: 0,
+            //     errors: [ [Object] ],
+            //     name: 'SyntaxError',
+            //     message: '...',
+            //   }
+            // }
+            if (error instanceof MetroNodeError) {
+              throw error;
+            }
 
-          const rscResponse = new ExpoResponse(pipe, {
+            // res.statusCode = 500;
+            // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
+            const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
+
+            return new ExpoResponse(
+              `Metro Bundler encountered an error: ` + sanitizedServerMessage,
+              {
+                status: 500,
+                headers: {
+                  'Content-Type': 'text/plain',
+                },
+              }
+            );
+          }
+
+          console.log('pipe:', pipe);
+          const response = new ExpoResponse(pipe, {
             headers: {
               // Set headers for RSC
               // 'Content-Type': 'application/json; charset=UTF-8',
@@ -1118,64 +1158,16 @@ export class MetroBundlerDevServer extends BundlerDevServer {
           });
           // TODO: Should we set X-Location? https://github.com/reactjs/server-components-demo/blob/95fcac10102d20722af60506af3b785b557c5fd7/server/api.server.js#L108C40-L108C48
 
+          console.log('>>', response.headers.entries());
           // TODO: Prevent this from being appended (in RNC CLI)
-          res.removeHeader('Surrogate-Control');
-          res.removeHeader('Cache-Control');
-          res.removeHeader('Expires');
+          // response.headers.delete('Surrogate-Control');
+          // response.headers.delete('Cache-Control');
+          // response.headers.delete('Expires');
+          // response.headers.delete('X-Content-Type-Options');
 
-          return respond(res, rscResponse);
-        } catch (error: any) {
-          // If you get a codeFrame error during SSR like when using a Class component in React Server Components, then this
-          // will throw with:
-          // {
-          //   rawObject: {
-          //     type: 'TransformError',
-          //     lineNumber: 0,
-          //     errors: [ [Object] ],
-          //     name: 'SyntaxError',
-          //     message: '...',
-          //   }
-          // }
-          if (error instanceof MetroNodeError) {
-            await logMetroError(this.projectRoot, { error });
-
-            // Forward the Metro server to the client.
-            // TODO: Cut out the middleman (metro dev server).
-
-            return respond(res, ExpoResponse.json(error.rawObject, { status: 500 }));
-          }
-
-          // res.statusCode = 500;
-          // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
-          const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
-
-          return respond(
-            res,
-            new ExpoResponse(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
-              status: 500,
-              headers: {
-                'Content-Type': 'text/plain',
-              },
-            })
-          );
-        }
-      };
-
-      // Server components
-      middleware.use(async (req: ServerRequest, res: ServerResponse, next: ServerNext) => {
-        if (!req?.url || !req.url.startsWith(rscPathPrefix)) {
-          return next();
-        }
-
-        try {
-          await sendResponse(req, res);
-        } catch (error) {
-          console.error('Error:', error);
-          res.statusCode = 500;
-          res.statusMessage = 'Internal Server Error';
-          res.end();
-        }
-      });
+          return response;
+        })
+      );
 
       if (useServerRendering) {
         middleware.use(
@@ -1477,4 +1469,75 @@ export function getDeepLinkHandler(projectRoot: string): DeepLinkHandler {
       ...getDevClientProperties(projectRoot, exp),
     });
   };
+}
+
+/**
+ * Returns a request handler for http that serves the response using Remix.
+ */
+export function createRequestHandler(
+  projectRoot: string,
+  handleRequest: (request: ExpoRequest) => Promise<ExpoResponse>
+): RequestHandler {
+  return async (req: ServerRequest, res: ServerResponse, next: ServerNext) => {
+    if (!req?.url || !req.method) {
+      return next();
+    }
+    // These headers (added by other middleware) break the browser preview of RSC.
+    res.removeHeader('X-Content-Type-Options');
+    res.removeHeader('Cache-Control');
+    res.removeHeader('Expires');
+    res.removeHeader('Surrogate-Control');
+
+    try {
+      const request = convertRequest(req, res);
+
+      const response = await handleRequest(request);
+
+      return await respond(res, response);
+    } catch (error: unknown) {
+      if (error instanceof MetroNodeError) {
+        await logMetroError(projectRoot, { error });
+
+        // Forward the Metro server to the client.
+        // TODO: Cut out the middleman (metro dev server).
+
+        return await respond(res, ExpoResponse.json(error.rawObject, { status: 500 }));
+      }
+
+      if (error instanceof Error) {
+        return await respond(
+          res,
+          new ExpoResponse('Internal Server Error: ' + error.message, {
+            status: 500,
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+          })
+        );
+      } else if (error instanceof ExpoResponse) {
+        return await respond(res, error);
+      }
+      // http doesn't support async functions, so we have to pass along the
+      // error manually using next().
+      // @ts-expect-error
+      next(error);
+    }
+  };
+}
+
+function isSupportedRequestMethod(method: string): method is 'GET' | 'POST' {
+  return method === 'GET' || method === 'POST';
+}
+function notAllowed(): never {
+  throw new ExpoResponse('Method Not Allowed', {
+    status: 405,
+    headers: {
+      'Content-Type': 'text/plain',
+    },
+  });
+}
+
+function winterNext(): never {
+  // eslint-disable-next-line no-throw-literal
+  throw undefined;
 }

@@ -315,12 +315,14 @@ export function withExtendedResolver(
         }
 
         const isExternal = // Extern these modules in standard Node.js environments.
-          /^(styleq(\/.+)?|deprecated-react-native-prop-types|expo-asset|invariant|nullthrows|memoize-one|@react-native\/assets-registry\/registry|@react-native\/normalize-color|react|react\/jsx-dev-runtime|scheduler|react-is|expo-modules-core|react-native|@babel\/runtime\/.+|react-dom(\/.+)?|metro-runtime(\/.+)?)$/.test(
+          /^(styleq(\/.+)?|deprecated-react-native-prop-types|expo-asset|invariant|nullthrows|memoize-one|@react-native\/assets-registry\/registry|@react-native\/normalize-color|react|react\/jsx-dev-runtime|scheduler|react-is|expo-modules-core|react-native|react-dom(\/.+)?|metro-runtime(\/.+)?)$/.test(
             moduleName
           ) ||
           /^react-native-web\/dist\/exports\/(Platform|NativeEventEmitter|StyleSheet|NativeModules|DeviceEventEmitter|Text|View)$/.test(
             moduleName
-          );
+          ) ||
+          // TODO: Add more
+          /^@babel\/runtime\/helpers\/(wrapNativeSuper)$/.test(moduleName);
 
         if (!isExternal && (platform === 'ios' || platform === 'android')) {
           // Auto extern all modules that are imported from React Native since RN has no tree-shaking/chill.

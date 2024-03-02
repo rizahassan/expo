@@ -19,6 +19,7 @@ import type {
   AnchorHTMLAttributes,
   ReactElement,
   MouseEvent,
+  PropsWithChildren,
 } from 'react';
 
 import { Text } from 'react-native';
@@ -226,7 +227,7 @@ function InnerRouter(props) {
         url.pathname = path;
       }
       if (searchParams) {
-        url.search = '?' + searchParams.toString();
+        url.search = searchParams.toString();
       }
       if (typeof hash === 'string') {
         url.hash = hash;
@@ -332,5 +333,38 @@ export function Router({ children }: { children?: ReactElement }) {
     Root as FunctionComponent<Omit<ComponentProps<typeof Root>, 'children'>>,
     { initialInput, initialSearchParamsString },
     createElement(InnerRouter, { children })
+  );
+}
+
+function notAvailableInServer(name: string) {
+  return () => {
+    throw new Error(`${name} is not in the server`);
+  };
+}
+
+/**
+ * ServerRouter for SSR
+ * This is not a public API.
+ */
+export function ServerRouter({
+  children,
+  loc,
+}: PropsWithChildren<{
+  loc: ReturnType<typeof parseLocation>;
+}>) {
+  return createElement(
+    Fragment,
+    null,
+    createElement(
+      RouterContext.Provider,
+      {
+        value: {
+          loc,
+          changeLocation: notAvailableInServer('changeLocation'),
+          prefetchLocation: notAvailableInServer('prefetchLocation'),
+        },
+      },
+      children
+    )
   );
 }

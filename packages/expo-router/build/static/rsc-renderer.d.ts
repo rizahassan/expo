@@ -32,7 +32,7 @@ export declare function renderRsc(opts: {
     };
 } & ({
     isExporting: true;
-    entries: EntriesPrd;
+    entries: EntriesDev;
 } | {
     isExporting: false;
     entries: EntriesDev;
@@ -41,6 +41,10 @@ export declare function renderRsc(opts: {
 export declare function getBuildConfig(opts: {
     config: ResolvedConfig;
     entries: EntriesPrd;
+    resolveClientEntry: (id: string) => {
+        id: string;
+        url: string;
+    };
 }): Promise<Iterable<{
     pathname: string;
     entries?: Iterable<{

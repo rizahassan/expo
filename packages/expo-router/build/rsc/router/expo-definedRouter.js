@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // import path from 'node:path';
 // import { existsSync } from 'node:fs';
 // import fsPromises from 'node:fs/promises';
-const _ctx_1 = require("expo-router/_ctx");
+const _ctx_async_1 = require("expo-router/_ctx-async");
 const react_1 = require("react");
 const defineRouter_1 = require("./defineRouter");
 const getRoutes_1 = require("../../getRoutes");
@@ -22,7 +22,7 @@ const getMappingAndItems = async (id) => {
         //   return null;
         // }
         // TODO: Check logic
-        const files = _ctx_1.ctx.keys();
+        const files = _ctx_async_1.ctx.keys();
         if (!files.includes(items[i])) {
             const slug = files.find((file) => file.match(/^(\[\w+\]|_\w+_)$/));
             if (slug) {
@@ -34,23 +34,41 @@ const getMappingAndItems = async (id) => {
     return { mapping, items };
 };
 const getPathConfig = async () => {
-    const files = _ctx_1.ctx.keys().map((file) => file.replace(/^\.\//, ''));
+    const files = _ctx_async_1.ctx
+        .keys()
+        .map((file) => file.replace(/^\.\//, ''))
+        .map(matchers_1.removeSupportedExtensions)
+        .filter(
+    // Leaf nodes only
+    (file) => !file.endsWith('_layout') && !file.endsWith('+not-found') && !file.endsWith('+html'));
     return files.map((file) => {
-        const names = file.split('/').filter(Boolean).slice(0, -1);
-        const pathSpec = names.map((name) => {
-            const match = name.match(/^(\[\w+\]|_\w+_)$/);
+        const names = file.split('/').filter(Boolean); //.slice(0, -1);
+        const pathSpec = names
+            .map((name, index) => {
+            const isLast = index === names.length - 1;
+            if (isLast && name === 'index') {
+                return null;
+            }
+            if ((0, matchers_1.matchGroupName)(name)) {
+                throw new Error('TODO: group name syntax is not supported');
+            }
+            if ((0, matchers_1.matchDeepDynamicRouteName)(name)) {
+                throw new Error('TODO: deep dynamic route name syntax is not supported');
+            }
+            const match = (0, matchers_1.matchDynamicName)(name); // name.match(/^(\[\w+\]|_\w+_)$/);
             if (match) {
-                return { type: 'group', name: match[1].slice(1, -1) };
+                return { type: 'group', name: match };
             }
             return { type: 'literal', name };
-        });
+        })
+            .filter((route) => route != null);
         return {
             path: pathSpec,
             isStatic: pathSpec.every(({ type }) => type === 'literal'),
         };
     });
 };
-const routes = (0, getRoutes_1.getRoutes)(_ctx_1.ctx, {
+const routes = (0, getRoutes_1.getRoutes)(_ctx_async_1.ctx, {
     importMode: 'lazy',
 });
 function wakuRouteIdToExpoRoute(route, routeId) {
@@ -94,10 +112,7 @@ exports.default = (0, defineRouter_1.defineRouter)(
 // getPathConfig
 async () => {
     const pathConfig = await getPathConfig();
-    // console.log(
-    //   '[CLI|ROUTER]: getPathConfig',
-    //   require('util').inspect(pathConfig, { depth: 20, colors: true })
-    // );
+    console.log('[CLI|ROUTER]: getPathConfig', require('util').inspect(pathConfig, { depth: 20, colors: true }));
     return pathConfig;
 }, 
 // getComponent (id is "**/layout" or "**/page")

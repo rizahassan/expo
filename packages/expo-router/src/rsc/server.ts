@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PathSpec } from './path';
 
 type Elements = Record<string, ReactNode>;
 
@@ -54,8 +55,8 @@ export type EntriesDev = {
 
 export type EntriesPrd = EntriesDev & {
   loadModule: (id: string) => Promise<unknown>;
-  loadHtmlHead: (pathname: string) => string;
-  skipRenderRsc: (input: string) => boolean;
+  dynamicHtmlPaths: [pathSpec: PathSpec, htmlHead: string][];
+  publicIndexHtml: string;
 };
 
 export function getEnv(key: string): string | undefined {

@@ -26,6 +26,12 @@ const fileURLToFilePath = (fileURL) => {
     return decodeURI(fileURL.slice('file://'.length));
 };
 exports.fileURLToFilePath = fileURLToFilePath;
+const resolveClientEntryForPrd = (id, config) => {
+    if (!id.startsWith('@id/')) {
+        throw new Error('Unexpected client entry in PRD: ' + id);
+    }
+    return config.basePath + id.slice('@id/'.length);
+};
 async function getRouteNodeForPathname(pathname) {
     // TODO: Populate this with Expo Router results.
     const routes = (0, getRoutes_1.getRoutes)(_ctx_1.ctx, {
@@ -237,6 +243,9 @@ async function getBuildConfig(opts) {
         console.warn("getBuildConfig is undefined. It's recommended for optimization and sometimes required.");
         return [];
     }
+    // const resolveClientEntry = isDev
+    // ? opts.resolveClientEntry
+    // : resolveClientEntryForPrd;
     const unstable_collectClientModules = async (input) => {
         const idSet = new Set();
         const readable = await renderRsc({
@@ -247,9 +256,12 @@ async function getBuildConfig(opts) {
             context: null,
             moduleIdCallback: ({ id }) => idSet.add(id),
             isExporting: true,
-            resolveClientEntry: (id) => {
-                throw new Error('TODO: Implement resolveClientEntry');
-            },
+            resolveClientEntry: opts.resolveClientEntry,
+            // resolveClientEntry: (id) => {
+            //   const entry = resolveClientEntryForPrd(id, config);
+            //   return { id: entry, url: entry };
+            //   // throw new Error('TODO: Implement resolveClientEntry');
+            // },
             entries,
         });
         await new Promise((resolve, reject) => {

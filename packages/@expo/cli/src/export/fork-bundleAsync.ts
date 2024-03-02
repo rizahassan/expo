@@ -189,12 +189,12 @@ async function bundleProductionMetroClientAsync(
         // Bundle splitting on web-only for now.
         // serializerOutput: bundle.platform === 'web' ? 'static' : undefined,
         serializerOutput: 'static',
-        inlineSourceMap: true,
+        // inlineSourceMap: true,
         isExporting: true,
         clientBoundaries,
       }),
       bundleType: 'bundle',
-      inlineSourceMap: true,
+      // inlineSourceMap: true,
       createModuleIdFactory: config.serializer.createModuleIdFactory,
       onProgress: (transformedFileCount: number, totalFileCount: number) => {
         reporter.update({

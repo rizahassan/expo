@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PathSpec } from './path';
 type Elements = Record<string, ReactNode>;
 export interface RenderContext<T = unknown> {
     rerender: (input: string, searchParams?: URLSearchParams) => void;
@@ -33,8 +34,8 @@ export type EntriesDev = {
 };
 export type EntriesPrd = EntriesDev & {
     loadModule: (id: string) => Promise<unknown>;
-    loadHtmlHead: (pathname: string) => string;
-    skipRenderRsc: (input: string) => boolean;
+    dynamicHtmlPaths: [pathSpec: PathSpec, htmlHead: string][];
+    publicIndexHtml: string;
 };
 export declare function getEnv(key: string): string | undefined;
 export {};

@@ -2,7 +2,7 @@
 // import path from 'node:path';
 // import { existsSync } from 'node:fs';
 // import fsPromises from 'node:fs/promises';
-import { ctx } from 'expo-router/_ctx';
+import { ctx } from 'expo-router/_ctx-async';
 import React, { lazy, createElement } from 'react';
 
 // import { glob } from 'glob';
@@ -12,7 +12,13 @@ import { defineRouter } from './defineRouter';
 import { Route, RouteNode } from '../../Route';
 import { getRoutes } from '../../getRoutes';
 import { getServerManifest } from '../../getServerManifest';
-import { stripInvisibleSegmentsFromPath } from '../../matchers';
+import {
+  matchDeepDynamicRouteName,
+  matchDynamicName,
+  matchGroupName,
+  removeSupportedExtensions,
+  stripInvisibleSegmentsFromPath,
+} from '../../matchers';
 
 // const routesDir = path.join(
 //   path.dirname(fileURLToPath(import.meta.url)),
@@ -42,16 +48,40 @@ const getMappingAndItems = async (id: string) => {
 };
 
 const getPathConfig = async () => {
-  const files = ctx.keys().map((file) => file.replace(/^\.\//, ''));
+  const files = ctx
+    .keys()
+    .map((file) => file.replace(/^\.\//, ''))
+    .map(removeSupportedExtensions)
+    .filter(
+      // Leaf nodes only
+      (file) => !file.endsWith('_layout') && !file.endsWith('+not-found') && !file.endsWith('+html')
+    );
+
   return files.map((file) => {
-    const names = file.split('/').filter(Boolean).slice(0, -1);
-    const pathSpec = names.map((name) => {
-      const match = name.match(/^(\[\w+\]|_\w+_)$/);
-      if (match) {
-        return { type: 'group', name: match[1]!.slice(1, -1) } as const;
-      }
-      return { type: 'literal', name } as const;
-    });
+    const names = file.split('/').filter(Boolean); //.slice(0, -1);
+    const pathSpec = names
+      .map((name, index) => {
+        const isLast = index === names.length - 1;
+
+        if (isLast && name === 'index') {
+          return null;
+        }
+
+        if (matchGroupName(name)) {
+          throw new Error('TODO: group name syntax is not supported');
+        }
+
+        if (matchDeepDynamicRouteName(name)) {
+          throw new Error('TODO: deep dynamic route name syntax is not supported');
+        }
+
+        const match = matchDynamicName(name); // name.match(/^(\[\w+\]|_\w+_)$/);
+        if (match) {
+          return { type: 'group', name: match } as const;
+        }
+        return { type: 'literal', name } as const;
+      })
+      .filter((route) => route != null);
     return {
       path: pathSpec,
       isStatic: pathSpec.every(({ type }) => type === 'literal'),
@@ -111,10 +141,10 @@ export default defineRouter(
   // getPathConfig
   async () => {
     const pathConfig = await getPathConfig();
-    // console.log(
-    //   '[CLI|ROUTER]: getPathConfig',
-    //   require('util').inspect(pathConfig, { depth: 20, colors: true })
-    // );
+    console.log(
+      '[CLI|ROUTER]: getPathConfig',
+      require('util').inspect(pathConfig, { depth: 20, colors: true })
+    );
     return pathConfig;
   },
   // getComponent (id is "**/layout" or "**/page")

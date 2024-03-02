@@ -33,6 +33,13 @@ export const fileURLToFilePath = (fileURL: string) => {
   return decodeURI(fileURL.slice('file://'.length));
 };
 
+const resolveClientEntryForPrd = (id: string, config: ResolvedConfig) => {
+  if (!id.startsWith('@id/')) {
+    throw new Error('Unexpected client entry in PRD: ' + id);
+  }
+  return config.basePath + id.slice('@id/'.length);
+};
+
 export async function getRouteNodeForPathname(pathname: string) {
   // TODO: Populate this with Expo Router results.
 
@@ -90,7 +97,7 @@ export async function renderRsc(
     // onReload: () => void;
     resolveClientEntry: (id: string) => { id: string; url: string };
   } & (
-    | { isExporting: true; entries: EntriesPrd }
+    | { isExporting: true; entries: EntriesDev }
     | {
         isExporting: false;
         entries: EntriesDev;
@@ -317,7 +324,11 @@ const decodeInput = (encodedInput: string) => {
 };
 
 // TODO: Implement this in production exports.
-export async function getBuildConfig(opts: { config: ResolvedConfig; entries: EntriesPrd }) {
+export async function getBuildConfig(opts: {
+  config: ResolvedConfig;
+  entries: EntriesPrd;
+  resolveClientEntry: (id: string) => { id: string; url: string };
+}) {
   const { config, entries } = opts;
 
   const {
@@ -330,6 +341,10 @@ export async function getBuildConfig(opts: { config: ResolvedConfig; entries: En
     return [];
   }
 
+  // const resolveClientEntry = isDev
+  // ? opts.resolveClientEntry
+  // : resolveClientEntryForPrd;
+
   const unstable_collectClientModules = async (input: string): Promise<string[]> => {
     const idSet = new Set<string>();
     const readable = await renderRsc({
@@ -340,9 +355,12 @@ export async function getBuildConfig(opts: { config: ResolvedConfig; entries: En
       context: null,
       moduleIdCallback: ({ id }) => idSet.add(id),
       isExporting: true,
-      resolveClientEntry: (id) => {
-        throw new Error('TODO: Implement resolveClientEntry');
-      },
+      resolveClientEntry: opts.resolveClientEntry,
+      // resolveClientEntry: (id) => {
+      //   const entry = resolveClientEntryForPrd(id, config);
+      //   return { id: entry, url: entry };
+      //   // throw new Error('TODO: Implement resolveClientEntry');
+      // },
       entries,
     });
     await new Promise<void>((resolve, reject) => {

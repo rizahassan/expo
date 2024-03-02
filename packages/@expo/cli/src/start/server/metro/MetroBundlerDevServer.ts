@@ -12,7 +12,11 @@ import { RequestHandler, convertRequest, respond } from '@expo/server/build/vend
 import { createReadableStreamFromReadable } from '@remix-run/node';
 import assert from 'assert';
 import chalk from 'chalk';
-import { decodeInput } from 'expo-router/build/rsc/renderers/utils';
+import {
+  decodeInput,
+  encodeInput,
+  generatePrefetchCode,
+} from 'expo-router/build/rsc/renderers/utils';
 import { AssetData } from 'metro';
 import fetch from 'node-fetch';
 import path from 'path';
@@ -75,6 +79,9 @@ import { ServerNext, ServerRequest, ServerResponse } from '../middleware/server.
 import { startTypescriptTypeGenerationAsync } from '../type-generation/startTypescriptTypeGeneration';
 
 import { HMRClient } from './ssrHmrClient';
+import { PathSpec } from 'expo-router/build/rsc/path';
+import { EntriesPrd } from 'expo-router/build/rsc/server';
+import { streamToStringAsync } from '../../../utils/stream';
 export type ExpoRouterRuntimeManifest = Awaited<
   ReturnType<typeof import('expo-router/build/static/renderStaticContent').getManifest>
 >;
@@ -513,7 +520,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       require('expo-router/build/matchers') as typeof import('expo-router/build/matchers')
     ).getNameFromFilePath(input);
 
-    console.log('getClientModules:', input, key, this.clientModuleMap.keys(), this.clientModuleMap);
+    // console.log('getClientModules:', input, key, this.clientModuleMap.keys(), this.clientModuleMap);
 
     const platformSet = this.clientModuleMap.get(platform);
     if (!platformSet) {
@@ -701,7 +708,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
         const id = '/' + clientReferenceUrl.hash;
         return {
           id,
-          url: clientReferenceUrl.pathname + clientReferenceUrl.search + clientReferenceUrl.hash,
+          url: clientReferenceUrl.pathname,
         };
       }
     };
@@ -739,6 +746,315 @@ export class MetroBundlerDevServer extends BundlerDevServer {
         },
       });
     }
+  }
+
+  async getRscBuildConfigAsync({
+    platform,
+    engine,
+    publicIndexHtml,
+  }: {
+    platform: string;
+    engine?: 'hermes';
+    publicIndexHtml: string;
+  }) {
+    const { baseUrl, mode, routerRoot, isExporting } = this.instanceMetroOptions;
+    assert(
+      baseUrl != null && mode != null && routerRoot != null && isExporting != null,
+      'The server must be started before calling ssrLoadModule.'
+    );
+    // if (method === 'POST') {
+    //   assert(req, 'Server request must be provided when method is POST (server actions)');
+    // }
+
+    // TODO: Extract CSS Modules / Assets from the bundler process
+    const {
+      fn: {
+        getBuildConfig,
+        // setupHmr,
+        // renderRouteWithContextKey, getRouteNodeForPathname
+      },
+    } = await this.ssrLoadModuleAndHmrEntry<
+      //   typeof import('expo-router/build/static/rsc-renderer')
+      // >('expo-router/node/rsc.js', {
+      typeof import('expo-router/src/static/rsc-renderer')
+    >('expo-router/src/static/rsc-renderer.ts', {
+      environment: 'react-server',
+      platform,
+    });
+
+    const router = await this.getExpoRouterRscEntriesGetterAsync({ platform });
+
+    // TODO: Add support for dynamic HTML paths
+    const dynamicHtmlPathMap = new Map<PathSpec, string>();
+    const dynamicHtmlPaths = Array.from(dynamicHtmlPathMap);
+
+    const buildConfig = await getBuildConfig({
+      config: {},
+      resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
+      entries: {
+        ...router,
+        loadModule(url: string) {
+          throw new Error('TODO: Add support for Server Actions in production');
+        },
+        dynamicHtmlPaths,
+        publicIndexHtml,
+      },
+    });
+
+    console.log('buildConfig', [...buildConfig][0]);
+
+    return buildConfig;
+  }
+
+  async emitRscFiles(
+    // rootDir: string,
+    // config: { distDir: string; rscPath: string },
+    // distEntries: EntriesPrd,
+    buildConfig: Awaited<
+      ReturnType<typeof import('expo-router/src/static/rsc-renderer').getBuildConfig>
+    >,
+    {
+      engine,
+      platform,
+    }: {
+      engine?: 'hermes';
+      platform: string;
+    },
+    files: ExportAssetMap
+  ) {
+    // const clientModuleMap = new Map<string, Set<string>>();
+
+    const getClientModules = (input: string) => {
+      const clientEntries = this.getClientModules(platform, input);
+
+      if (!clientEntries) {
+        // Could be a key mismatch
+        Log.warn('-----');
+        Log.warn(' NO CLIENT ENTRIES !! TECHNICALLY NOT A BUG');
+        Log.warn('-----');
+      }
+
+      console.log('clientEntries', clientEntries, input);
+      // TODO: Improve this
+      const serverRoot = getMetroServerRoot(this.projectRoot);
+      const entryFiles = clientEntries.map((entry) => {
+        return path.join(serverRoot, entry.replace(/#.+$/, ''));
+      });
+
+      return entryFiles;
+      // return this.getClientModules('web', input);
+    };
+
+    const staticInputSet = new Set<string>();
+    const clientModules = new Set<string>();
+    await Promise.all(
+      Array.from(buildConfig).map(async ({ entries, context }) => {
+        for (const { input, isStatic } of entries || []) {
+          console.log('[export] emit rsc>', { input, isStatic });
+          if (!isStatic) {
+            continue;
+          }
+          if (staticInputSet.has(input)) {
+            continue;
+          }
+          staticInputSet.add(input);
+          const destRscFile = path.join(
+            // rootDir,
+            // config.distDir,
+            // config.publicDir,
+            this.getExpoLineOptions().rscPath!.replace(/^\/+/, ''),
+            encodeInput(input)
+          );
+
+          const pipe = await this.renderRscToReadableStream({
+            route: input,
+            method: 'GET',
+            engine,
+            platform,
+            searchParams: new URLSearchParams(),
+          });
+
+          const rsc = await streamToStringAsync(pipe);
+
+          console.log('route.rsc', rsc);
+
+          files.set(destRscFile, {
+            contents: rsc,
+            targetDomain: 'client',
+          });
+
+          const clientBoundaries = getClientModules(input);
+          for (const clientBoundary of clientBoundaries) {
+            clientModules.add(clientBoundary);
+          }
+
+          // // await mkdir(joinPath(destRscFile, '..'), { recursive: true });
+          // const readable = await this.renderRscToReadableStream(
+          //   {
+          //     input,
+          //     searchParams: new URLSearchParams(),
+          //     method: 'GET',
+          //     config,
+          //     context,
+          //     moduleIdCallback: (id) => addClientModule(input, id),
+          //   },
+          //   {
+          //     isDev: false,
+          //     entries: distEntries,
+          //   },
+          // );
+          // await pipeline(
+          //   Readable.fromWeb(readable as any),
+          //   createWriteStream(destRscFile),
+          // );
+        }
+      })
+    );
+    return { getClientModules, clientModules: Array.from(clientModules) };
+  }
+
+  async emitHtmlFiles(
+    config: { basePath: string; rscPath: string; indexHtml: string },
+    distEntriesFile: string,
+    distEntries: EntriesPrd,
+    buildConfig: Awaited<
+      ReturnType<typeof import('expo-router/src/static/rsc-renderer').getBuildConfig>
+    >,
+    getClientModules: (input: string) => string[],
+    ssr: boolean,
+    {
+      publicIndexHtml,
+    }: {
+      publicIndexHtml: string;
+    },
+    files: ExportAssetMap
+  ) {
+    const basePrefix = config.basePath + config.rscPath + '/';
+    // const publicIndexHtmlFile = joinPath(
+    //   rootDir,
+    //   config.distDir,
+    //   config.publicDir,
+    //   config.indexHtml,
+    // );
+    // const publicIndexHtml = await readFile(publicIndexHtmlFile, {
+    //   encoding: 'utf8',
+    // });
+    // if (ssr) {
+    //   await unlink(publicIndexHtmlFile);
+    // }
+    const publicIndexHtmlHead = publicIndexHtml.replace(/.*?<head>(.*?)<\/head>.*/s, '$1');
+    const dynamicHtmlPathMap = new Map<PathSpec, string>();
+    await Promise.all(
+      Array.from(buildConfig).map(async ({ pathname, isStatic, entries, customCode, context }) => {
+        const pathSpec = typeof pathname === 'string' ? pathname2pathSpec(pathname) : pathname;
+        let htmlStr = publicIndexHtml;
+        let htmlHead = publicIndexHtmlHead;
+        const inputsForPrefetch = new Set<string>();
+        const moduleIdsForPrefetch = new Set<string>();
+        for (const { input, skipPrefetch } of entries || []) {
+          if (!skipPrefetch) {
+            inputsForPrefetch.add(input);
+            for (const id of getClientModules(input)) {
+              moduleIdsForPrefetch.add(id);
+            }
+          }
+        }
+        const code =
+          generatePrefetchCode(basePrefix, inputsForPrefetch, moduleIdsForPrefetch) +
+          (customCode || '');
+        if (code) {
+          // HACK is this too naive to inject script code?
+          htmlStr = htmlStr.replace(
+            /<\/head>/,
+            `<script type="module" async>${code}</script></head>`
+          );
+          htmlHead += `<script type="module" async>${code}</script>`;
+        }
+        if (!isStatic) {
+          dynamicHtmlPathMap.set(pathSpec, htmlHead);
+          return;
+        }
+        pathname = pathSpec2pathname(pathSpec);
+        const destHtmlFile = path.join(
+          // rootDir,
+          // config.distDir,
+          // config.publicDir,
+          path.extname(pathname)
+            ? pathname
+            : pathname === '/404'
+              ? '404.html' // HACK special treatment for 404, better way?
+              : pathname + '/' + config.indexHtml
+        );
+        const htmlReadable = null;
+        // const htmlReadable =
+        //   ssr &&
+        //   (await renderHtml({
+        //     config,
+        //     pathname,
+        //     searchParams: new URLSearchParams(),
+        //     htmlHead,
+        //     renderRscForHtml: (input, searchParams) =>
+        //       renderRsc(
+        //         {
+        //           config,
+        //           input,
+        //           searchParams,
+        //           method: 'GET',
+        //           context,
+        //         },
+        //         {
+        //           isDev: false,
+        //           entries: distEntries,
+        //         }
+        //       ),
+        //     getSsrConfigForHtml: (pathname, searchParams) =>
+        //       getSsrConfig(
+        //         {
+        //           config,
+        //           pathname,
+        //           searchParams,
+        //         },
+        //         {
+        //           isDev: false,
+        //           entries: distEntries,
+        //         }
+        //       ),
+        //     loadClientModule: (key) => distEntries.loadModule(CLIENT_PREFIX + key),
+        //     isDev: false,
+        //     loadModule: distEntries.loadModule,
+        //   }));
+        // await mkdir(joinPath(destHtmlFile, '..'), { recursive: true });
+        if (htmlReadable) {
+          // await pipeline(
+          //   Readable.fromWeb(htmlReadable as any),
+          //   createWriteStream(destHtmlFile),
+          // );
+
+          files.set(destHtmlFile, {
+            contents: await streamToStringAsync(htmlReadable),
+            targetDomain: 'client',
+          });
+        } else {
+          files.set(destHtmlFile, {
+            contents: htmlStr,
+            targetDomain: 'client',
+          });
+
+          // await writeFile(destHtmlFile, htmlStr);
+        }
+      })
+    );
+    const dynamicHtmlPaths = Array.from(dynamicHtmlPathMap);
+    const code = `
+export const dynamicHtmlPaths= ${JSON.stringify(dynamicHtmlPaths)};
+export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
+`;
+
+    files.set(distEntriesFile, {
+      contents: code,
+      targetDomain: 'client',
+    });
+    // await appendFile(distEntriesFile, code);
   }
 
   async renderRscToReadableStream({
@@ -802,97 +1118,53 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     const config = {};
 
     if (isExporting) {
-      throw new Error('TODO: Add exporting back');
+      // throw new Error('TODO: Add exporting back');
 
-      // const pipe = await renderRsc({
-      //   // isDev: mode === 'development',
+      const pipe = await renderRsc({
+        body: req?.body!,
+        entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
+        searchParams,
+        context: {},
+        isExporting: !!isExporting,
+        resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
+        config,
+        method,
+        input: route,
+        moduleIdCallback: (moduleInfo: {
+          id: string;
+          chunks: string[];
+          name: string;
+          async: boolean;
+        }) => {
+          console.log('moduleIdCallback:', moduleInfo.id, moduleInfo.name, moduleInfo.async);
+          let platformSet = this.clientModuleMap.get(platform);
+          if (!platformSet) {
+            platformSet = new Map();
+            this.clientModuleMap.set(platform, platformSet);
+          }
+          // Collect the client boundaries while rendering the server components.
+          // Indexed by routes.
+          let idSet = platformSet.get(normalizedRouteKey);
+          if (!idSet) {
+            idSet = new Set();
+            platformSet.set(normalizedRouteKey, idSet);
+          }
+          idSet.add(moduleInfo.id);
+        },
+      });
 
-      //   body: createReadableStreamFromReadable(req!)!,
-      //   // body: method === 'POST' ? createReadableStreamFromReadable(req!) : null,
-      //   entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
-      //   searchParams,
-      //   context: {},
-      //   // elements: {
-      //   //   [route]: elements,
-      //   // },
-      //   isExporting: !!isExporting,
-      //   resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
-      //   config,
-      //   // serverRoot,
-      //   // url,
-      //   method,
-      //   input: route,
-
-      //   customImport: async (relativeDevServerUrl: string): Promise<any> => {
-      //     const url = new URL(relativeDevServerUrl, this.getDevServerUrlOrAssert());
-
-      //     // TODO: Apply all params here.
-      //     url.searchParams.set('modulesOnly', 'true');
-      //     url.searchParams.set('runModule', 'true');
-
-      //     url.searchParams.set('transform.environment', 'react-server');
-      //     url.searchParams.set('resolver.environment', 'react-server');
-
-      //     url.searchParams.set('platform', platform);
-
-      //     const urlString = url.toString();
-      //     const contents = await metroFetchAsync(this.projectRoot, urlString);
-      //     // console.log('Server action:');
-      //     // console.log(contents);
-      //     return evalMetro(this.projectRoot, contents.src, contents.filename);
-      //   },
-      //   // serverUrl: new URL(serverUrl),
-      //   // onReload: (...args: any[]) => {
-      //   //   // Send reload command to client from Fast Refresh code.
-      //   //   debug('[CLI]: Reload RSC:', args);
-
-      //   //   // TODO: Target only certain platforms
-      //   //   this.broadcastMessage('reload');
-      //   // },
-      //   moduleIdCallback: (moduleInfo: {
-      //     id: string;
-      //     chunks: string[];
-      //     name: string;
-      //     async: boolean;
-      //   }) => {
-      //     console.log('moduleIdCallback:', moduleInfo.id, moduleInfo.name, moduleInfo.async);
-      //     let platformSet = this.clientModuleMap.get(platform);
-      //     if (!platformSet) {
-      //       platformSet = new Map();
-      //       this.clientModuleMap.set(platform, platformSet);
-      //     }
-      //     // Collect the client boundaries while rendering the server components.
-      //     // Indexed by routes.
-      //     let idSet = platformSet.get(normalizedRouteKey);
-      //     if (!idSet) {
-      //       idSet = new Set();
-      //       platformSet.set(normalizedRouteKey, idSet);
-      //     }
-      //     idSet.add(moduleInfo.id);
-      //   },
-      // });
-
-      // return pipe;
+      return pipe;
     } else {
       this.setupHmr(new URL(serverUrl));
 
       const pipe = await renderRsc({
-        // isDev: mode === 'development',
-
         body: req?.body!,
-        // body: createReadableStreamFromReadable(req?.body)!,
-        // body: method === 'POST' ? createReadableStreamFromReadable(req!) : null,
         entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
         searchParams,
         context: {},
-        // elements: {
-        //   [route]: elements,
-        // },
         isExporting: !!isExporting,
         resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
         config,
-        // serverRoot,
-        // url,
         method,
         input: route,
 
@@ -928,20 +1200,20 @@ export class MetroBundlerDevServer extends BundlerDevServer {
           name: string;
           async: boolean;
         }) => {
-          console.log('moduleIdCallback:', moduleInfo.id, moduleInfo.name, moduleInfo.async);
-          let platformSet = this.clientModuleMap.get(platform);
-          if (!platformSet) {
-            platformSet = new Map();
-            this.clientModuleMap.set(platform, platformSet);
-          }
-          // Collect the client boundaries while rendering the server components.
-          // Indexed by routes.
-          let idSet = platformSet.get(normalizedRouteKey);
-          if (!idSet) {
-            idSet = new Set();
-            platformSet.set(normalizedRouteKey, idSet);
-          }
-          idSet.add(moduleInfo.id);
+          // console.log('moduleIdCallback:', moduleInfo.id, moduleInfo.name, moduleInfo.async);
+          // let platformSet = this.clientModuleMap.get(platform);
+          // if (!platformSet) {
+          //   platformSet = new Map();
+          //   this.clientModuleMap.set(platform, platformSet);
+          // }
+          // // Collect the client boundaries while rendering the server components.
+          // // Indexed by routes.
+          // let idSet = platformSet.get(normalizedRouteKey);
+          // if (!idSet) {
+          //   idSet = new Set();
+          //   platformSet.set(normalizedRouteKey, idSet);
+          // }
+          // idSet.add(moduleInfo.id);
         },
       });
 
@@ -1541,3 +1813,16 @@ function winterNext(): never {
   // eslint-disable-next-line no-throw-literal
   throw undefined;
 }
+
+const pathname2pathSpec = (pathname: string): PathSpec =>
+  pathname
+    .split('/')
+    .filter(Boolean)
+    .map((name) => ({ type: 'literal', name }));
+
+const pathSpec2pathname = (pathSpec: PathSpec): string => {
+  if (pathSpec.some(({ type }) => type !== 'literal')) {
+    throw new Error('Cannot convert pathSpec to pathname: ' + JSON.stringify(pathSpec));
+  }
+  return '/' + pathSpec.map(({ name }) => name!).join('/');
+};

@@ -10,7 +10,6 @@ const primitives_1 = require("./primitives");
 const client_1 = require("./rsc/client");
 const EmptyRoute_1 = require("./views/EmptyRoute");
 const Try_1 = require("./views/Try");
-const _ctx_1 = require("../_ctx");
 function getSortedChildren(children, order, initialRouteName) {
     if (!order?.length) {
         return children
@@ -159,23 +158,22 @@ function getQualifiedRouteComponent(value) {
         }, [rscServerId]);
         return react_1.default.useMemo(() => {
             console.log('Slot.2>>', rscServerId);
-            if (value.type === 'layout') {
-                // const res = ctx(value.route)
-                //   ? value.loadRoute()
-                //   : (() => {
-                //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
-                //     })();
-                console.log();
-                if (_ctx_1.ctx.keys().includes(value.contextKey)) {
-                    const Component = (0, _ctx_1.ctx)(value.contextKey).default;
-                    return <Component {...props} ref={ref}/>;
-                }
-                else {
-                    console.log('Falling back on missing component', value.contextKey);
-                    const Navigator = require('./views/Navigator').DefaultNavigator;
-                    return <Navigator {...props} ref={ref}/>;
-                }
-            }
+            // if (value.type === 'layout') {
+            //   // const res = ctx(value.route)
+            //   //   ? value.loadRoute()
+            //   //   : (() => {
+            //   //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
+            //   //     })();
+            //   console.log();
+            //   if (ctx.keys().includes(value.contextKey)) {
+            //     const Component = ctx(value.contextKey).default as React.ComponentType<any>;
+            //     return <Component {...props} ref={ref} />;
+            //   } else {
+            //     console.log('Falling back on missing component', value.contextKey);
+            //     const Navigator = require('./views/Navigator').DefaultNavigator;
+            //     return <Navigator {...props} ref={ref} />;
+            //   }
+            // }
             return (<client_1.Slot id={rscServerId} fallback={<div>
               RSC Slot Fallback ({rscServerId} - {value.contextKey})
             </div>}/>);

@@ -22,7 +22,7 @@ import { usePrefetchLocation } from './rsc/router/client';
 import { EmptyRoute } from './views/EmptyRoute';
 import { SuspenseFallback } from './views/SuspenseFallback';
 import { Try } from './views/Try';
-import { ctx } from '../_ctx';
+// import { ctx } from '../_ctx';
 
 export type ScreenProps<
   TOptions extends Record<string, any> = Record<string, any>,
@@ -233,22 +233,22 @@ export function getQualifiedRouteComponent(value: RouteNode) {
     return React.useMemo(() => {
       console.log('Slot.2>>', rscServerId);
 
-      if (value.type === 'layout') {
-        // const res = ctx(value.route)
-        //   ? value.loadRoute()
-        //   : (() => {
-        //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
-        //     })();
-        console.log();
-        if (ctx.keys().includes(value.contextKey)) {
-          const Component = ctx(value.contextKey).default as React.ComponentType<any>;
-          return <Component {...props} ref={ref} />;
-        } else {
-          console.log('Falling back on missing component', value.contextKey);
-          const Navigator = require('./views/Navigator').DefaultNavigator;
-          return <Navigator {...props} ref={ref} />;
-        }
-      }
+      // if (value.type === 'layout') {
+      //   // const res = ctx(value.route)
+      //   //   ? value.loadRoute()
+      //   //   : (() => {
+      //   //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
+      //   //     })();
+      //   console.log();
+      //   if (ctx.keys().includes(value.contextKey)) {
+      //     const Component = ctx(value.contextKey).default as React.ComponentType<any>;
+      //     return <Component {...props} ref={ref} />;
+      //   } else {
+      //     console.log('Falling back on missing component', value.contextKey);
+      //     const Navigator = require('./views/Navigator').DefaultNavigator;
+      //     return <Navigator {...props} ref={ref} />;
+      //   }
+      // }
       return (
         <Slot
           id={rscServerId}

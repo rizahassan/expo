@@ -226,63 +226,83 @@ export async function getClientBoundariesAsync(
     engine,
   }: { files?: ExportAssetMap; platform: string; engine?: 'hermes' }
 ) {
-  const { serverManifest, manifest, renderAsync } = await devServer.getStaticRenderFunctionAsync();
-
-  const clientBoundaries = await Promise.all(
-    serverManifest.htmlRoutes.map(async (route) => {
-      console.log('route', route);
-
-      const pipe = await devServer.renderRscToReadableStream({
-        route: route.file,
-        method: 'GET',
-        engine,
-        platform,
-        searchParams: new URLSearchParams(),
-      });
-
-      const rsc = await streamToStringAsync(pipe);
-
-      console.log('route.rsc', rsc);
-
-      const clientEntries = devServer.getClientModules(platform, route.file);
-
-      if (!clientEntries) {
-        // Could be a key mismatch
-        Log.warn('-----');
-        Log.warn(' NO CLIENT ENTRIES !! TECHNICALLY NOT A BUG');
-        Log.warn('-----');
-      }
-
-      console.log('clientEntries', clientEntries, route.file);
-      // TODO: Improve this
-      const serverRoot = getMetroServerRoot(projectRoot);
-      const entryFiles = clientEntries.map((entry) => {
-        return path.join(serverRoot, entry.replace(/#.+$/, ''));
-      });
-
-      files.set(
-        path.join(
-          devServer.getExpoLineOptions().rscPath!.replace(/^\/+/, ''),
-          route.page.replace(/\/index$/, '') + '/page.txt'
-        ),
-        {
-          contents: rsc,
-          targetDomain: 'client',
-        }
-      );
-
-      return { route, clientBoundaries: entryFiles };
-    })
+  const buildConfig = await devServer.getRscBuildConfigAsync({ platform, publicIndexHtml: '' });
+  const { getClientModules, clientModules } = await devServer.emitRscFiles(
+    buildConfig,
+    {
+      platform,
+      engine,
+    },
+    files
   );
 
-  console.log('Collected clientBoundaries during RSC generation:', clientBoundaries);
+  console.log(files);
+
+  console.log(
+    'Collected clientBoundaries during RSC generation:',
+    // clientBoundaries,
+    clientModules
+  );
+  // process.exit(0);
+  // await devServer.emitHtmlFiles({}, )
+
+  // const { serverManifest, manifest, renderAsync } = await devServer.getStaticRenderFunctionAsync();
+
+  // const clientBoundaries = await Promise.all(
+  //   serverManifest.htmlRoutes.map(async (route) => {
+  //     console.log('route', route);
+
+  //     const pipe = await devServer.renderRscToReadableStream({
+  //       route: route.file,
+  //       method: 'GET',
+  //       engine,
+  //       platform,
+  //       searchParams: new URLSearchParams(),
+  //     });
+
+  //     const rsc = await streamToStringAsync(pipe);
+
+  //     console.log('route.rsc', rsc);
+
+  //     const clientEntries = devServer.getClientModules(platform, route.file);
+
+  //     if (!clientEntries) {
+  //       // Could be a key mismatch
+  //       Log.warn('-----');
+  //       Log.warn(' NO CLIENT ENTRIES !! TECHNICALLY NOT A BUG');
+  //       Log.warn('-----');
+  //     }
+
+  //     console.log('clientEntries', clientEntries, route.file);
+  //     // TODO: Improve this
+  //     const serverRoot = getMetroServerRoot(projectRoot);
+  //     const entryFiles = clientEntries.map((entry) => {
+  //       return path.join(serverRoot, entry.replace(/#.+$/, ''));
+  //     });
+
+  //     files.set(
+  //       path.join(
+  //         devServer.getExpoLineOptions().rscPath!.replace(/^\/+/, ''),
+  //         route.page.replace(/\/index$/, '') + '/page.txt'
+  //       ),
+  //       {
+  //         contents: rsc,
+  //         targetDomain: 'client',
+  //       }
+  //     );
+
+  //     return { route, clientBoundaries: entryFiles };
+  //   })
+  // );
+
   return {
-    serverManifest,
-    clientBoundaries: [
-      ...new Set(clientBoundaries.map(({ clientBoundaries }) => clientBoundaries).flat()),
-    ],
-    manifest,
-    renderAsync,
+    // serverManifest,
+    clientBoundaries: clientModules,
+    // clientBoundaries: [
+    //   ...new Set(clientBoundaries.map(({ clientBoundaries }) => clientBoundaries).flat()),
+    // ],
+    // manifest,
+    // renderAsync,
   };
 }
 
@@ -304,13 +324,20 @@ async function exportFromServerAsync(
   const devServer = devServerManager.getDefaultDevServer();
   assert(devServer instanceof MetroBundlerDevServer);
 
-  const { clientBoundaries, manifest, serverManifest, renderAsync } =
-    await getClientBoundariesAsync(projectRoot, devServer, {
-      platform,
-      files,
-      // TODO
-      engine: 'hermes',
-    });
+  const { serverManifest, manifest, renderAsync } = await devServer.getStaticRenderFunctionAsync();
+  const { clientBoundaries } = await getClientBoundariesAsync(projectRoot, devServer, {
+    platform,
+    files,
+    // TODO
+    engine: 'hermes',
+  });
+  // const { clientBoundaries, manifest, serverManifest, renderAsync } =
+  //   await getClientBoundariesAsync(projectRoot, devServer, {
+  //     platform,
+  //     files,
+  //     // TODO
+  //     engine: 'hermes',
+  //   });
 
   const resources = await devServer.getStaticResourcesAsync({
     includeSourceMaps,

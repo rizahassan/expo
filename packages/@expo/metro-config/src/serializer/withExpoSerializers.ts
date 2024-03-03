@@ -16,11 +16,7 @@ import {
   serverPreludeSerializerPlugin,
 } from './environmentVariableSerializerPlugin';
 import { ExpoSerializerOptions, baseJSBundle } from './fork/baseJSBundle';
-import {
-  // clientManifestSerializerPlugin,
-  getSortedModules,
-  graphToSerialAssetsAsync,
-} from './serializeChunks';
+import { getSortedModules, graphToSerialAssetsAsync } from './serializeChunks';
 import { SerialAsset } from './serializerAssets';
 import { env } from '../env';
 
@@ -54,8 +50,6 @@ export function withExpoSerializers(
   if (!env.EXPO_NO_CLIENT_ENV_VARS) {
     processors.push(environmentVariableSerializerPlugin);
   }
-
-  // processors.push(clientManifestSerializerPlugin);
 
   return withSerializerPlugins(config, processors, options);
 }
@@ -237,39 +231,7 @@ function getDefaultSerializer(
     })();
 
     if (serializerOptions?.outputMode !== 'static') {
-      const res = await defaultSerializer(...props);
-      //  console.log('>>', res, props);
-      // if (typeof res === 'string')  {}
-
-      // if (options.runModule) {
-      //   const paths = [...options.runBeforeMainModule, entryPoint];
-
-      //   for (const path of paths) {
-      //     if (modules.some((module: Module<>) => module.path === path)) {
-      //       const code = options.getRunModuleStatement(
-      //         options.createModuleId(path),
-      //       );
-      //       output.push({
-      //         path: `require-${path}`,
-      //         dependencies: new Map(),
-      //         getSource: (): Buffer => Buffer.from(''),
-      //         inverseDependencies: new CountingSet(),
-      //         output: [
-      //           {
-      //             type: 'js/script/virtual',
-      //             data: {
-      //               code,
-      //               lineCount: countLines(code),
-      //               map: [],
-      //             },
-      //           },
-      //         ],
-      //       });
-      //     }
-      //   }
-      // }
-
-      return res;
+      return defaultSerializer(...props);
     }
 
     // Mutate the serializer options with the parsed options.

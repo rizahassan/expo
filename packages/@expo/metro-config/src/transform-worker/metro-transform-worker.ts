@@ -12,7 +12,6 @@ import { transformFromAstSync } from '@babel/core';
 import type { ParseResult, PluginItem } from '@babel/core';
 import generate from '@babel/generator';
 import * as babylon from '@babel/parser';
-import traverse from '@babel/traverse';
 import * as types from '@babel/types';
 import type { TransformResultDependency } from 'metro/src/DeltaBundler';
 import JsFileWrapping from 'metro/src/ModuleGraph/worker/JsFileWrapping';
@@ -62,13 +61,6 @@ interface JSFile extends BaseFile {
   readonly ast?: ParseResult | null;
   readonly type: JSFileType;
   readonly functionMap: FBSourceFunctionMap | null;
-  // Added by `babel-preset-expo` for server components.
-  // clientReferences:
-  //   | {
-  //       entryPoint: string;
-  //       exports: string[];
-  //     }[]
-  //   | null;
 }
 
 interface JSONFile extends BaseFile {
@@ -172,25 +164,6 @@ class InvalidRequireCallError extends Error {
     this.filename = filename;
   }
 }
-
-// function getIgnoredModules(serializedValue: any): string[] {
-//   if (!serializedValue) {
-//     return [];
-//   }
-//   if (Array.isArray(serializedValue)) {
-//     return serializedValue;
-//   }
-//   if (typeof serializedValue === 'string') {
-//     try {
-//       return getIgnoredModules(JSON.parse(serializedValue));
-//     } catch {
-//       throw new Error(
-//         'Invalid `ignoredModules` value. Expected an array or a JSON-encoded array of strings.'
-//       );
-//     }
-//   }
-//   return [];
-// }
 
 async function transformJS(
   file: JSFile,
@@ -327,17 +300,6 @@ async function transformJS(
     dependencies = [];
     wrappedAst = JsFileWrapping.wrapPolyfill(ast);
   } else {
-    // const ignoredModules: (string | RegExp)[] = getIgnoredModules(
-    //   options.customTransformOptions?.ignoredModules
-    // );
-
-    // const isServer = options.customTransformOptions?.environment === 'node';
-
-    // // Automatically ignore node built-in modules in server environments.
-    // if (isServer) {
-    //   ignoredModules.push(/node:.+/);
-    // }
-
     try {
       const opts = {
         asyncRequireModulePath: config.asyncRequireModulePath,
@@ -351,19 +313,9 @@ async function transformJS(
         allowOptionalDependencies: config.allowOptionalDependencies,
         dependencyMapName: config.unstable_dependencyMapReservedName,
         unstable_allowRequireContext: config.unstable_allowRequireContext,
-        // ignoredModules,
       };
 
       ({ ast, dependencies, dependencyMapName } = collectDependencies(ast, opts));
-
-      // if (
-      //   // !options.customTransformOptions?.environment &&
-      //   file.filename.match(/expo-router\/virtual-client-boundaries\.js/)
-      // ) {
-      //   console.log('Clear ast');
-      //   // Clear AST to prevent it from eagerly loading JS.
-      //   ast.program.body = [];
-      // }
     } catch (error) {
       if (error instanceof InternalInvalidRequireCallError) {
         throw new InvalidRequireCallError(error, file.filename);
@@ -397,11 +349,11 @@ async function transformJS(
     !config.unstable_disableNormalizePseudoGlobals
   ) {
     // NOTE(EvanBacon): Simply pushing this function will mutate the AST, so it must run before the `generate` step!!
-    // reserved.push(
-    //   ...metroTransformPlugins.normalizePseudoGlobals(wrappedAst, {
-    //     reservedNames: reserved,
-    //   })
-    // );
+    reserved.push(
+      ...metroTransformPlugins.normalizePseudoGlobals(wrappedAst, {
+        reservedNames: reserved,
+      })
+    );
   }
 
   const result = generate(
@@ -439,7 +391,6 @@ async function transformJS(
         code,
         lineCount: countLines(code),
         map,
-        // clientReferences: file.clientReferences,
         functionMap: file.functionMap,
       },
       type: file.type,
@@ -471,7 +422,6 @@ async function transformAsset(
     type: 'js/module/asset',
     ast: result.ast,
     functionMap: null,
-    // clientReferences: null,
   };
 
   return transformJS(jsFile, context);
@@ -496,7 +446,6 @@ async function transformJSWithBabel(
   const jsFile: JSFile = {
     ...file,
     ast: transformResult.ast,
-    // clientReferences: transformResult.metadata?.clientReferences ?? null,
     functionMap:
       transformResult.metadata?.metro?.functionMap ??
       // Fallback to deprecated explicitly-generated `functionMap`
@@ -535,13 +484,7 @@ async function transformJSON(
 
   const output: JsOutput[] = [
     {
-      data: {
-        code,
-        lineCount: countLines(code),
-        map,
-        functionMap: null,
-        // clientReferences: null
-      },
+      data: { code, lineCount: countLines(code), map, functionMap: null },
       type: jsType,
     },
   ];
@@ -629,7 +572,6 @@ export async function transform(
     inputFileSize: data.length,
     code: sourceCode,
     type: options.type === 'script' ? 'js/script' : 'js/module',
-    // clientReferences: null,
     functionMap: null,
   };
 

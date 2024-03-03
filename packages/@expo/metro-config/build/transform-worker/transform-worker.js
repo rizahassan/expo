@@ -58,7 +58,7 @@ function getStringArray(value) {
 async function transform(config, projectRoot, filename, data, options) {
     if (filename.match(/expo-router\/virtual-client-boundaries\.js/)) {
         const environment = options.customTransformOptions?.environment;
-        const isServer = environment === 'node';
+        const isServer = environment === 'node' || environment === 'react-server';
         if (!isServer) {
             const clientBoundaries = getStringArray(options.customTransformOptions?.clientBoundaries);
             // Inject client boundaries into the root client bundle for production bundling.

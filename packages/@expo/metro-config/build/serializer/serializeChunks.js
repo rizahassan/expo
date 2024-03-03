@@ -289,12 +289,7 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
         publicPath,
     }));
     return {
-        artifacts: [
-            ...jsAssets,
-            ...cssDeps,
-            // rscAsset
-        ].filter(Boolean),
-        // rscManifest: rscClientReferenceManifest,
+        artifacts: [...jsAssets, ...cssDeps],
         assets: metroAssets,
     };
 }

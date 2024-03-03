@@ -411,12 +411,8 @@ export async function graphToSerialAssetsAsync(
   })) as AssetData[];
 
   return {
-    artifacts: [
-      ...jsAssets,
-      ...cssDeps,
-      // rscAsset
-    ].filter(Boolean) as SerialAsset[],
-    // rscManifest: rscClientReferenceManifest,
+    artifacts: [...jsAssets, ...cssDeps],
+
     assets: metroAssets,
   };
 }

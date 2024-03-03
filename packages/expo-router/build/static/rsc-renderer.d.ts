@@ -55,5 +55,23 @@ export declare function getBuildConfig(opts: {
     customCode?: string | undefined;
     context?: unknown;
 }>>;
+export type GetSsrConfigArgs = {
+    config: ResolvedConfig;
+    pathname: string;
+    searchParams: URLSearchParams;
+};
+type GetSsrConfigOpts = {
+    isDev: false;
+    entries: EntriesPrd;
+} | {
+    isDev: true;
+    entries: EntriesDev;
+    resolveClientEntry: (id: string) => string;
+};
+export declare function getSsrConfig(args: GetSsrConfigArgs, opts: GetSsrConfigOpts): Promise<{
+    body: any;
+    input: string;
+    searchParams?: URLSearchParams | undefined;
+} | null>;
 export {};
 //# sourceMappingURL=rsc-renderer.d.ts.map

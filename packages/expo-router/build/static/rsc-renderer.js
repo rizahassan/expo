@@ -9,7 +9,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBuildConfig = exports.renderRsc = exports.getRouteNodeForPathname = exports.fileURLToFilePath = void 0;
+exports.getSsrConfig = exports.getBuildConfig = exports.renderRsc = exports.getRouteNodeForPathname = exports.fileURLToFilePath = void 0;
 const stream_1 = require("@remix-run/node/dist/stream");
 const chalk_1 = __importDefault(require("chalk"));
 const server_edge_1 = require("react-server-dom-webpack/server.edge");
@@ -281,4 +281,27 @@ async function getBuildConfig(opts) {
     return output;
 }
 exports.getBuildConfig = getBuildConfig;
+async function getSsrConfig(args, opts) {
+    const { config, pathname, searchParams } = args;
+    const { isDev, entries } = opts;
+    const resolveClientEntry = isDev ? opts.resolveClientEntry : resolveClientEntryForPrd;
+    const { default: { getSsrConfig }, loadModule, } = entries;
+    const { renderToReadableStream } = await loadModule('react-server-dom-webpack/server.edge').then((m) => m.default);
+    const ssrConfig = await getSsrConfig?.(pathname, { searchParams });
+    if (!ssrConfig) {
+        return null;
+    }
+    const bundlerConfig = new Proxy({}, {
+        get(_target, encodedId) {
+            const [file, name] = encodedId.split('#');
+            const id = resolveClientEntry(file, config);
+            return { id, chunks: [id], name, async: true };
+        },
+    });
+    return {
+        ...ssrConfig,
+        body: renderToReadableStream(ssrConfig.body, bundlerConfig),
+    };
+}
+exports.getSsrConfig = getSsrConfig;
 //# sourceMappingURL=rsc-renderer.js.map

@@ -315,7 +315,7 @@ export function withExtendedResolver(
         }
 
         const isExternal = // Extern these modules in standard Node.js environments.
-          /^(styleq(\/.+)?|deprecated-react-native-prop-types|expo-asset|invariant|nullthrows|memoize-one|@react-native\/assets-registry\/registry|@react-native\/normalize-color|react|react\/jsx-dev-runtime|scheduler|react-is|expo-modules-core|react-native|react-dom(\/.+)?|metro-runtime(\/.+)?)$/.test(
+          /^(styleq(\/.+)?|deprecated-react-native-prop-types|invariant|nullthrows|memoize-one|@react-native\/assets-registry\/registry|@react-native\/normalize-color|react|react\/jsx-dev-runtime|scheduler|react-is|expo-modules-core|react-native|react-dom(\/.+)?|metro-runtime(\/.+)?)$/.test(
             moduleName
           ) ||
           /^react-native-web\/dist\/exports\/(Platform|NativeEventEmitter|StyleSheet|NativeModules|DeviceEventEmitter|Text|View)$/.test(
@@ -326,16 +326,16 @@ export function withExtendedResolver(
 
         if (!isExternal && (platform === 'ios' || platform === 'android')) {
           // Auto extern all modules that are imported from React Native since RN has no tree-shaking/chill.
-          if (context.originModulePath.match(/node_modules[\\/]react-native[\\/]/)) {
-            return true;
-          }
+          // if (context.originModulePath.match(/node_modules[\\/]react-native[\\/]/)) {
+          //   return true;
+          // }
         }
 
         if (isExternal) {
           // console.log('Extern async chunk >', moduleName);
         } else {
-          if (!moduleName.match(/^[/.]/))
-            console.log('[SKIP] Extern async chunk >', moduleName, context.originModulePath);
+          // if (!moduleName.match(/^[/.]/))
+          //   console.log('[SKIP] Extern async chunk >', moduleName, context.originModulePath);
         }
         // if (!isExternal && !moduleName.match(/^[/.]/)) {
         //   if (!hasLogged.has(moduleName)) {

@@ -1,10 +1,6 @@
-type ResolvedConfig = {
-    publicDir: string;
-    basePath: string;
-    rscPath: string;
-};
+import { EntriesPrd } from '../rsc/server';
+type ResolvedConfig = any;
 export declare const renderHtml: (opts: {
-    serverRoot: string;
     config: ResolvedConfig;
     pathname: string;
     searchParams: URLSearchParams;
@@ -15,10 +11,10 @@ export declare const renderHtml: (opts: {
         searchParams?: URLSearchParams | undefined;
         body: ReadableStream;
     } | null>;
+    loadClientModule: (key: string) => Promise<unknown>;
 } & ({
     isDev: false;
-    loadModule: (id: string) => Promise<unknown>;
-    isBuild: boolean;
+    loadModule: EntriesPrd['loadModule'];
 } | {
     isDev: true;
     rootDir: string;

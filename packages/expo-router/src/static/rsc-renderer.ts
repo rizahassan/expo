@@ -380,3 +380,51 @@ export async function getBuildConfig(opts: {
   const output = await getBuildConfig(unstable_collectClientModules);
   return output;
 }
+
+export type GetSsrConfigArgs = {
+  config: ResolvedConfig;
+  pathname: string;
+  searchParams: URLSearchParams;
+};
+
+type GetSsrConfigOpts =
+  | { isDev: false; entries: EntriesPrd }
+  | {
+      isDev: true;
+      entries: EntriesDev;
+      resolveClientEntry: (id: string) => string;
+    };
+
+export async function getSsrConfig(args: GetSsrConfigArgs, opts: GetSsrConfigOpts) {
+  const { config, pathname, searchParams } = args;
+  const { isDev, entries } = opts;
+
+  const resolveClientEntry = isDev ? opts.resolveClientEntry : resolveClientEntryForPrd;
+
+  const {
+    default: { getSsrConfig },
+    loadModule,
+  } = entries as (EntriesDev & { loadModule: undefined }) | EntriesPrd;
+  const { renderToReadableStream } = await loadModule!('react-server-dom-webpack/server.edge').then(
+    (m: any) => m.default
+  );
+
+  const ssrConfig = await getSsrConfig?.(pathname, { searchParams });
+  if (!ssrConfig) {
+    return null;
+  }
+  const bundlerConfig = new Proxy(
+    {},
+    {
+      get(_target, encodedId: string) {
+        const [file, name] = encodedId.split('#') as [string, string];
+        const id = resolveClientEntry(file, config);
+        return { id, chunks: [id], name, async: true };
+      },
+    }
+  );
+  return {
+    ...ssrConfig,
+    body: renderToReadableStream(ssrConfig.body, bundlerConfig),
+  };
+}

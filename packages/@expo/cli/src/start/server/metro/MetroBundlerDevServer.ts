@@ -985,44 +985,85 @@ export class MetroBundlerDevServer extends BundlerDevServer {
               ? '404.html' // HACK special treatment for 404, better way?
               : pathname + '/' + config.indexHtml
         );
-        const htmlReadable = null;
-        // const htmlReadable =
-        //   ssr &&
-        //   (await renderHtml({
-        //     config,
-        //     pathname,
-        //     searchParams: new URLSearchParams(),
-        //     htmlHead,
-        //     renderRscForHtml: (input, searchParams) =>
-        //       renderRsc(
-        //         {
-        //           config,
-        //           input,
-        //           searchParams,
-        //           method: 'GET',
-        //           context,
-        //         },
-        //         {
-        //           isDev: false,
-        //           entries: distEntries,
-        //         }
-        //       ),
-        //     getSsrConfigForHtml: (pathname, searchParams) =>
-        //       getSsrConfig(
-        //         {
-        //           config,
-        //           pathname,
-        //           searchParams,
-        //         },
-        //         {
-        //           isDev: false,
-        //           entries: distEntries,
-        //         }
-        //       ),
-        //     loadClientModule: (key) => distEntries.loadModule(CLIENT_PREFIX + key),
-        //     isDev: false,
-        //     loadModule: distEntries.loadModule,
-        //   }));
+        // const htmlReadable = null;
+
+        // TODO: Extract CSS Modules / Assets from the bundler process
+        const { renderHtml } = await this.ssrLoadModule<
+          //   typeof import('expo-router/build/static/rsc-renderer')
+          // >('expo-router/node/rsc.js', {
+          typeof import('expo-router/src/static/html-renderer')
+        >('expo-router/src/static/html-renderer.ts', {
+          environment: 'react-server',
+          platform: 'web',
+        });
+        const { getSsrConfig } = await this.ssrLoadModule<
+          //   typeof import('expo-router/build/static/rsc-renderer')
+          // >('expo-router/node/rsc.js', {
+          typeof import('expo-router/src/static/rsc-renderer')
+        >('expo-router/src/static/rsc-renderer.ts', {
+          environment: 'react-server',
+          platform: 'web',
+        });
+
+        const htmlReadable =
+          ssr &&
+          (await renderHtml({
+            config,
+            pathname,
+            searchParams: new URLSearchParams(),
+            htmlHead,
+            loadClientModule: async (id) => {
+              const CLIENT_MODULE_MAP: Record<string, string> = {
+                react: 'react',
+                'rd-server': 'react-dom/server.edge',
+                'rsdw-client': 'react-server-dom-webpack/client.edge',
+                'waku-client': 'waku/client',
+              };
+
+              return await this.ssrLoadModule(CLIENT_MODULE_MAP[id], {
+                environment: 'react-server',
+                platform: 'web',
+              });
+            },
+            renderRscForHtml: (input, searchParams) => {
+              return this.renderRscToReadableStream({
+                searchParams,
+                engine: 'hermes',
+                method: 'GET',
+                platform: 'web',
+                route: input,
+                entries: distEntries,
+              });
+              // return renderRsc(
+              //   {
+              //     config,
+              //     input,
+              //     searchParams,
+              //     method: 'GET',
+              //     context,
+              //   },
+              //   {
+              //     isDev: false,
+              //     entries: distEntries,
+              //   }
+              // );
+            },
+            getSsrConfigForHtml: (pathname, searchParams) =>
+              getSsrConfig(
+                {
+                  config,
+                  pathname,
+                  searchParams,
+                },
+                {
+                  isDev: false,
+                  entries: distEntries,
+                }
+              ),
+            // loadClientModule: (key) => distEntries.loadModule(CLIENT_PREFIX + key),
+            isDev: false,
+            loadModule: distEntries.loadModule,
+          }));
         // await mkdir(joinPath(destHtmlFile, '..'), { recursive: true });
         if (htmlReadable) {
           // await pipeline(
@@ -1064,6 +1105,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
     platform,
     req,
     engine,
+    entries,
   }: {
     route: string;
     searchParams: URLSearchParams;
@@ -1072,6 +1114,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
     platform: string;
     req?: ExpoRequest;
     engine?: 'hermes';
+    entries?: EntriesPrd;
   }) {
     const { baseUrl, mode, routerRoot, isExporting } = this.instanceMetroOptions;
     assert(
@@ -1122,7 +1165,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
 
       const pipe = await renderRsc({
         body: req?.body!,
-        entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
+        entries: entries ?? (await this.getExpoRouterRscEntriesGetterAsync({ platform })),
         searchParams,
         context: {},
         isExporting: !!isExporting,
@@ -1159,7 +1202,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
 
       const pipe = await renderRsc({
         body: req?.body!,
-        entries: await this.getExpoRouterRscEntriesGetterAsync({ platform }),
+        entries: entries ?? (await this.getExpoRouterRscEntriesGetterAsync({ platform })),
         searchParams,
         context: {},
         isExporting: !!isExporting,
@@ -1448,86 +1491,87 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
             routerRoot,
             config,
             bundleApiRoute: (functionFilePath) => this.ssrImportApiRoute(functionFilePath),
-            //             getHtml: async (req) => {
-            //               const devMiddleware = (await this.ssrLoadModule(
-            //                 require.resolve('expo-router/build/static/handler-dev.js'), {
-            //                   environment: 'react-server'
-            //                 }
-            //               )) as typeof import('expo-router/build/static/handler-dev');
+            getHtml: async (req) => {
+              const devMiddleware = (await this.ssrLoadModule(
+                require.resolve('expo-router/build/static/handler-dev.js'),
+                {
+                  environment: 'react-server',
+                }
+              )) as typeof import('expo-router/build/static/handler-dev');
 
-            //               const handler = await devMiddleware.createHandler({
-            //                 projectRoot: this.projectRoot,
-            //                 config: {
-            //                   basePath: baseUrl,
-            //                   htmlHead: '',
-            //                   mainJs: '',
-            //                   publicDir: '',
-            //                   rscPath: '/rsc',
-            //                   srcDir: '',
-            //                 },
-            //                 ssrLoadModule(fileURL) {
-            //                   return this.ssrLoadModule(fileURL);
-            //                 },
-            //                 renderRscWithWorker: async (props) => {
-            //                   // TODO: This is terrible, it should use all the `props`.
-            //                   const stream = await this.renderRscToReadableStream({
-            //                     route: props.input,
-            //                     method: props.method,
-            //                     platform: 'web',
-            //                     url: new URL(req.url!, this.getDevServerUrlOrAssert()),
-            //                   });
-            //                   console.log("stream:", stream)
-            //                   return [
-            //                     stream,
-            //                     // TODO: Next context
-            //                     {},
-            //                   ];
-            //                 },
-            //                 // ssrLoadModule: metroSsr.ssrLoadModule,
-            //                 async transformIndexHtml(pathname, data) {
-            //                   console.log('transform index:', pathname, data);
-            //                   const codeToInject = `
-            // globalThis.__waku_module_cache__ = new Map();
-            // globalThis.__webpack_chunk_load__ = (id) => import(id).then((m) => globalThis.__waku_module_cache__.set(id, m));
-            // globalThis.__webpack_require__ = (id) => globalThis.__waku_module_cache__.get(id);`;
+              const handler = await devMiddleware.createHandler({
+                projectRoot: this.projectRoot,
+                config: {
+                  basePath: baseUrl,
+                  htmlHead: '',
+                  mainJs: '',
+                  publicDir: '',
+                  rscPath: '/rsc',
+                  srcDir: '',
+                },
+                ssrLoadModule(fileURL) {
+                  return this.ssrLoadModule(fileURL);
+                },
+                renderRscWithWorker: async (props) => {
+                  // TODO: This is terrible, it should use all the `props`.
+                  const stream = await this.renderRscToReadableStream({
+                    route: props.input,
+                    method: props.method,
+                    platform: 'web',
+                    url: new URL(req.url!, this.getDevServerUrlOrAssert()),
+                  });
+                  console.log('stream:', stream);
+                  return [
+                    stream,
+                    // TODO: Next context
+                    {},
+                  ];
+                },
+                // ssrLoadModule: metroSsr.ssrLoadModule,
+                async transformIndexHtml(pathname, data) {
+                  console.log('transform index:', pathname, data);
+                  const codeToInject = `
+  globalThis.__waku_module_cache__ = new Map();
+  globalThis.__webpack_chunk_load__ = (id) => import(id).then((m) => globalThis.__waku_module_cache__.set(id, m));
+  globalThis.__webpack_require__ = (id) => globalThis.__waku_module_cache__.get(id);`;
 
-            //                   //            // HACK without <base>, some relative assets don't work.
-            //                   // // FIXME ideally, we should avoid this.
-            //                   // { tag: 'base', attrs: { href: config.basePath } },
-            //                   // {
-            //                   //   tag: 'script',
-            //                   //   attrs: { type: 'module', async: true },
-            //                   //   children: codeToInject,
-            //                   // },
-            //                   // ...(config.cssAssets || []).map((href) => ({
-            //                   //   tag: 'link',
-            //                   //   attrs: { rel: 'stylesheet', href },
-            //                   //   injectTo: 'head' as const,
-            //                   // })),
+                  //            // HACK without <base>, some relative assets don't work.
+                  // // FIXME ideally, we should avoid this.
+                  // { tag: 'base', attrs: { href: config.basePath } },
+                  // {
+                  //   tag: 'script',
+                  //   attrs: { type: 'module', async: true },
+                  //   children: codeToInject,
+                  // },
+                  // ...(config.cssAssets || []).map((href) => ({
+                  //   tag: 'link',
+                  //   attrs: { rel: 'stylesheet', href },
+                  //   injectTo: 'head' as const,
+                  // })),
 
-            //                   const start = `<!DOCTYPE html>
-            //                   <html>
-            //                     <head>
-            //                       <meta charset="utf-8" />
-            //                       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-            //                       <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1.00001, viewport-fit=cover" />
-            //                     </head>
-            //                     <body></body>
-            //                   </html>`;
+                  const start = `<!DOCTYPE html>
+                    <html>
+                      <head>
+                        <meta charset="utf-8" />
+                        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+                        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1.00001, viewport-fit=cover" />
+                      </head>
+                      <body></body>
+                    </html>`;
 
-            //                   // TODO: Run additional plugins.
+                  // TODO: Run additional plugins.
 
-            //                   return start;
-            //                 },
-            //                 env: process.env,
-            //                 ssr: true,
-            //               });
+                  return start;
+                },
+                env: process.env,
+                ssr: true,
+              });
 
-            //               // TODO: Memoize this stuff.
-            //               // const res = new ExpoResponse();
+              // TODO: Memoize this stuff.
+              // const res = new ExpoResponse();
 
-            //               return await handler(req);
-            //             },
+              return await handler(req);
+            },
             getStaticPageAsync: (pathname) => {
               return this.getStaticPageAsync(pathname);
             },

@@ -16,6 +16,7 @@ import A10_ServerActions from '../10-server-actions/entry';
 import A11_ExpoViewsTest from '../11-expo-views/entry';
 import A14_RNW from '../14-react-native-web/entry';
 import A15_ClientUsePromise from '../15-client-use-promise/entry';
+import A16_ServerOnly from '../16-server-only/entry';
 import { Try } from 'expo-router/build/views/Try';
 import { ErrorBoundary } from 'expo-router/build/views/ErrorBoundary';
 
@@ -63,6 +64,7 @@ const App = () => {
         {/* <A11_ExpoViewsTest /> */}
         <A14_RNW />
         <A15_ClientUsePromise />
+        <A16_ServerOnly />
       </ScrollView>
     </SafeAreaView>
   );

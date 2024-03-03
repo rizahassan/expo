@@ -1,9 +1,10 @@
-import 'server-only';
+'use client';
+
+import 'client-only';
 
 import { Text, View } from 'react-native';
-import ClientOnlyImport from './client';
 
-export default function ServerOnlyImport() {
+export default function ClientOnlyImport() {
   return (
     <View
       style={{
@@ -13,8 +14,7 @@ export default function ServerOnlyImport() {
         padding: 8,
         gap: 8,
       }}>
-      <Text style={{ fontWeight: 'bold' }}>16) import server-only (Server Component)</Text>
-      <ClientOnlyImport />
+      <Text style={{ fontWeight: 'bold' }}>import client-only (Client Component)</Text>
     </View>
   );
 }

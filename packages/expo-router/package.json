@@ -7,8 +7,7 @@
   "main": "build/index",
   "types": "build/index.d.ts",
   "sideEffects": [
-    "entry.js",
-    "virtual-client-boundaries.js"
+    "entry.js"
   ],
   "files": [
     "assets",

@@ -77,8 +77,6 @@ export function addEventListener(listener: (url: string) => void) {
     callback = ({ url }: { url: string }) => {
       const parsed = Linking.parse(url);
 
-      console.log('UPDATE>>', isExpoGo, url);
-
       // If the URL is defined (default in Expo Go dev apps) and the URL has no path:
       // `exp://192.168.87.39:19000/` then use the default `exp://192.168.87.39:19000/--/`
       if (

@@ -58,8 +58,6 @@ export function wrapFetchWithWindowLocation(
         warnProductionOriginNotConfigured(props[0]);
       }
 
-      console.log('PUSHER>', props[0]);
-
       props[0] = new URL(props[0], window.location?.origin).toString();
     } else if (props[0] && typeof props[0] === 'object') {
       if (props[0].url && typeof props[0].url === 'string' && props[0].url.startsWith('/')) {

@@ -48,7 +48,6 @@ function wrapFetchWithWindowLocation(fetch) {
             if (process.env.NODE_ENV !== 'production') {
                 warnProductionOriginNotConfigured(props[0]);
             }
-            console.log('PUSHER>', props[0]);
             props[0] = new URL(props[0], window.location?.origin).toString();
         }
         else if (props[0] && typeof props[0] === 'object') {

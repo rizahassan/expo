@@ -23,7 +23,7 @@ export function createDeviceMiddlewareFactory(
       new VscodeDebuggerSetBreakpointByUrlMiddleware(deviceInfo),
       new VscodeRuntimeGetPropertiesMiddleware(deviceInfo),
       new VscodeRuntimeCallFunctionOnMiddleware(deviceInfo),
-    ];
+    ].filter((middleware) => middleware.isEnabled());
 
     return {
       handleDeviceMessage(message: any, info: DebuggerMetadata) {

@@ -22,6 +22,13 @@ type TargetCapabilityFlags = {
    * In the proxy, this disables source fetching emulation and host rewrites.
    */
   nativeSourceCodeFetching?: boolean;
+
+  /**
+   * The target supports native network inspection.
+   *
+   * In the proxy, this disables intercepting and storing network requests.
+   */
+  nativeNetworkInspection?: boolean;
 };
 
 // TODO: use `@react-native/dev-middleware` type instead
@@ -46,6 +53,16 @@ export type DeviceMetadata = {
 // TODO: use `@react-native/dev-middleware` type instead
 export abstract class DeviceMiddleware {
   constructor(protected readonly deviceInfo: DeviceMetadata) {}
+
+  /** Determine if this middleware should be enabled or disabled, based on the page capabilities */
+  isEnabled(): boolean {
+    return true;
+  }
+
+  /** Check if the device supports one of the native capabilities */
+  hasCapability(flag: keyof TargetCapabilityFlags): boolean {
+    return this.deviceInfo.page.capabilities[flag] === true;
+  }
 
   /**
    * Intercept a message coming from the device, modify or respond to it through `this._sendMessageToDevice`.

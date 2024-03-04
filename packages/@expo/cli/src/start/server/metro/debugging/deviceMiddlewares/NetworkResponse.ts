@@ -15,6 +15,10 @@ export class NetworkResponseMiddleware extends DeviceMiddleware {
   /** All known responses, mapped by request id */
   storage = new Map<string, DebuggerResponse<NetworkGetResponseBody>['result']>();
 
+  isEnabled() {
+    return !this.hasCapability('nativeNetworkInspection');
+  }
+
   handleDeviceMessage(message: DeviceRequest<NetworkReceivedResponseBody>) {
     if (message.method === 'Expo(Network.receivedResponseBody)') {
       const { requestId, ...requestInfo } = message.params;

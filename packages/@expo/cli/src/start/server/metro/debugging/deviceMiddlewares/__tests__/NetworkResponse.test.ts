@@ -1,12 +1,14 @@
-import { NetworkResponseHandler } from '../NetworkResponse';
+import { NetworkResponseMiddleware } from '../NetworkResponse';
+import { type DeviceMetadata } from '../types';
 
 it('responds to response body from device and debugger', () => {
-  const handler = new NetworkResponseHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new NetworkResponseMiddleware(device);
   const socket = { send: jest.fn() };
 
   // Expect the device message to be handled
   expect(
-    handler.onDeviceMessage({
+    handler.handleDeviceMessage({
       method: 'Expo(Network.receivedResponseBody)',
       params: {
         requestId: '1337',
@@ -18,7 +20,7 @@ it('responds to response body from device and debugger', () => {
 
   // Expect the debugger message to be handled
   expect(
-    handler.onDebuggerMessage(
+    handler.handleDebuggerMessage(
       {
         id: 420,
         method: 'Network.getResponseBody',
@@ -41,12 +43,13 @@ it('responds to response body from device and debugger', () => {
 });
 
 it('does not respond to non-existing response', () => {
-  const handler = new NetworkResponseHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new NetworkResponseMiddleware(device);
   const socket = { send: jest.fn() };
 
   // Expect the debugger message to not be handled
   expect(
-    handler.onDebuggerMessage(
+    handler.handleDebuggerMessage(
       {
         id: 420,
         method: 'Network.getResponseBody',

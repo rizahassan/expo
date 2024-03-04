@@ -1,8 +1,8 @@
 import {
-  DebuggerSetBreakpointByUrl,
-  VscodeDebuggerSetBreakpointByUrlHandler,
+  type DebuggerSetBreakpointByUrl,
+  VscodeDebuggerSetBreakpointByUrlMiddleware,
 } from '../VscodeDebuggerSetBreakpointByUrl';
-import { DebuggerRequest } from '../types';
+import { type DebuggerRequest, type DeviceMetadata } from '../types';
 import { getDebuggerType } from '../utils';
 
 jest.mock('../utils', () => ({
@@ -11,7 +11,8 @@ jest.mock('../utils', () => ({
 }));
 
 it('does not respond on non-vscode debugger type', () => {
-  const handler = new VscodeDebuggerSetBreakpointByUrlHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new VscodeDebuggerSetBreakpointByUrlMiddleware(device);
   const message: DebuggerRequest<DebuggerSetBreakpointByUrl> = {
     id: 422,
     method: 'Debugger.setBreakpointByUrl',
@@ -23,13 +24,14 @@ it('does not respond on non-vscode debugger type', () => {
   };
 
   // Should not stop propagation for non-vscode debugger type
-  expect(handler.onDebuggerMessage(message, {})).toBe(false);
+  expect(handler.handleDebuggerMessage(message, {})).toBe(false);
 });
 
 it('mutates `Debugger.setBreakpointByUrl` debugger request to create an unbounded breakpoint', () => {
   jest.mocked(getDebuggerType).mockReturnValue('vscode');
 
-  const handler = new VscodeDebuggerSetBreakpointByUrlHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new VscodeDebuggerSetBreakpointByUrlMiddleware(device);
   const localHttpUrl: DebuggerRequest<DebuggerSetBreakpointByUrl> = {
     id: 420,
     method: 'Debugger.setBreakpointByUrl',
@@ -59,9 +61,9 @@ it('mutates `Debugger.setBreakpointByUrl` debugger request to create an unbounde
   };
 
   // These messages should still be propagated, it should return `false`
-  expect(handler.onDebuggerMessage(localHttpUrl, {})).toBe(false);
-  expect(handler.onDebuggerMessage(lanHttpsUrl, {})).toBe(false);
-  expect(handler.onDebuggerMessage(correctUrl, {})).toBe(false);
+  expect(handler.handleDebuggerMessage(localHttpUrl, {})).toBe(false);
+  expect(handler.handleDebuggerMessage(lanHttpsUrl, {})).toBe(false);
+  expect(handler.handleDebuggerMessage(correctUrl, {})).toBe(false);
 
   // Expect the `localHttpUrl` and `lanHttpsUrl` to be mutated
   expect(localHttpUrl.params).not.toHaveProperty('urlRegex');

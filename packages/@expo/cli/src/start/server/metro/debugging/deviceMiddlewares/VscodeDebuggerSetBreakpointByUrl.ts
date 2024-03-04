@@ -9,7 +9,7 @@ import { getDebuggerType } from './utils';
  * Hermes needs to create the breakpoint to get the proper ID, but it must be unbounded.
  * Once the sourcemap is loaded, vscode will rebind the unbounded breakpoint to the correct location (using `Debugger.setBreakpoint`).
  */
-export class VscodeDebuggerSetBreakpointByUrlMiddleware implements DeviceMiddleware {
+export class VscodeDebuggerSetBreakpointByUrlMiddleware extends DeviceMiddleware {
   handleDebuggerMessage(
     message: DebuggerRequest<DebuggerSetBreakpointByUrl>,
     { userAgent }: DebuggerMetadata

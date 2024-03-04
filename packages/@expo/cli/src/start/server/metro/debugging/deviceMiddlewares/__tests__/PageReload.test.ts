@@ -1,12 +1,14 @@
-import { PageReloadHandler } from '../PageReload';
+import { PageReloadMiddleware } from '../PageReload';
+import { type DeviceMetadata } from '../types';
 
 it('broadcasts reload message', () => {
+  const device = {} as DeviceMetadata;
   const bundler = { broadcastMessage: jest.fn() };
-  const handler = new PageReloadHandler(bundler as any);
+  const handler = new PageReloadMiddleware(device, bundler as any);
   const socket = { send: jest.fn() };
 
   expect(
-    handler.onDebuggerMessage(
+    handler.handleDebuggerMessage(
       {
         id: 420,
         method: 'Page.reload',

@@ -1,9 +1,52 @@
 import type { unstable_Device } from '@react-native/dev-middleware';
+import type WS from 'ws';
 
+// TODO: use `@react-native/dev-middleware` type instead
 export type DebuggerMetadata = NonNullable<unstable_Device['_debuggerConnection']>;
 
 // TODO: use `@react-native/dev-middleware` type instead
-export interface DeviceMiddleware {
+type TargetCapabilityFlags = {
+  /**
+   * The target supports a stable page representation across reloads.
+   *
+   * In the proxy, this disables legacy page reload emulation and the
+   * additional '(Experimental)' target in `/json/list`.
+   *
+   * In the launch flow, this allows targets to be matched directly by `appId`.
+   */
+  nativePageReloads?: boolean;
+
+  /**
+   * The target supports fetching source code and source maps.
+   *
+   * In the proxy, this disables source fetching emulation and host rewrites.
+   */
+  nativeSourceCodeFetching?: boolean;
+};
+
+// TODO: use `@react-native/dev-middleware` type instead
+type Page = {
+  id: string;
+  title: string;
+  vm: string;
+  app: string;
+  capabilities: TargetCapabilityFlags;
+};
+
+// TODO: use `@react-native/dev-middleware` type instead
+export type DeviceMetadata = {
+  deviceId: string;
+  deviceName: string;
+  deviceSocket: WS;
+  appId: string;
+  page: Page;
+  projectRoot: string;
+};
+
+// TODO: use `@react-native/dev-middleware` type instead
+export abstract class DeviceMiddleware {
+  constructor(protected readonly deviceInfo: DeviceMetadata) {}
+
   /**
    * Intercept a message coming from the device, modify or respond to it through `this._sendMessageToDevice`.
    * Return `true` if the message was handled, this will stop the message propagation.

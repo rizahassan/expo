@@ -11,7 +11,7 @@ import {
 } from './types';
 import { respond } from './utils';
 
-export class NetworkResponseMiddleware implements DeviceMiddleware {
+export class NetworkResponseMiddleware extends DeviceMiddleware {
   /** All known responses, mapped by request id */
   storage = new Map<string, DebuggerResponse<NetworkGetResponseBody>['result']>();
 

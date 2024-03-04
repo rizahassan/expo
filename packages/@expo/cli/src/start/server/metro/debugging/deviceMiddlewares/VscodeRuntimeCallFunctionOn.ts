@@ -16,7 +16,7 @@ import { getDebuggerType, respond } from './utils';
  * @see https://github.com/expo/vscode-expo/issues/231
  * @see https://github.com/microsoft/vscode-js-debug/blob/dcccaf3972d675cc1e5c776450bb4c3dc8c178c1/src/adapter/stackTrace.ts#L319-L324
  */
-export class VscodeRuntimeCallFunctionOnMiddleware implements DeviceMiddleware {
+export class VscodeRuntimeCallFunctionOnMiddleware extends DeviceMiddleware {
   handleDebuggerMessage(
     message: DebuggerRequest<RuntimeCallFunctionOn>,
     { socket, userAgent }: DebuggerMetadata

@@ -17,7 +17,7 @@ import { getDebuggerType } from './utils';
  * @see https://github.com/facebook/hermes/issues/114
  * @see https://github.com/microsoft/vscode-js-debug/issues/1583
  */
-export class VscodeRuntimeGetPropertiesMiddleware implements DeviceMiddleware {
+export class VscodeRuntimeGetPropertiesMiddleware extends DeviceMiddleware {
   /** Keep track of `Runtime.getProperties` responses to intercept, by request id */
   interceptGetProperties = new Set<number>();
 

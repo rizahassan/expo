@@ -1,8 +1,8 @@
 import {
-  RuntimeCallFunctionOn,
-  VscodeRuntimeCallFunctionOnHandler,
+  type RuntimeCallFunctionOn,
+  VscodeRuntimeCallFunctionOnMiddleware,
 } from '../VscodeRuntimeCallFunctionOn';
-import { DebuggerRequest } from '../types';
+import { type DebuggerRequest, type DeviceMetadata } from '../types';
 import { getDebuggerType } from '../utils';
 
 jest.mock('../utils', () => ({
@@ -11,11 +11,12 @@ jest.mock('../utils', () => ({
 }));
 
 it('does not respond on non-vscode debugger type', () => {
-  const handler = new VscodeRuntimeCallFunctionOnHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new VscodeRuntimeCallFunctionOnMiddleware(device);
   const socket = { send: jest.fn() };
 
   // Message should be sent to the device
-  expect(handler.onDebuggerMessage(callFunctionOnMessage, { socket })).toBe(false);
+  expect(handler.handleDebuggerMessage(callFunctionOnMessage, { socket })).toBe(false);
   // Handler should not respond
   expect(socket.send).not.toBeCalled();
 });
@@ -23,11 +24,12 @@ it('does not respond on non-vscode debugger type', () => {
 it('swallows `Runtime.callFunctionOn` debugger message and responds with object ID pointer', () => {
   jest.mocked(getDebuggerType).mockReturnValue('vscode');
 
-  const handler = new VscodeRuntimeCallFunctionOnHandler();
+  const device = {} as DeviceMetadata;
+  const handler = new VscodeRuntimeCallFunctionOnMiddleware(device);
   const socket = { send: jest.fn() };
 
   // Message should NOT be sent to the device
-  expect(handler.onDebuggerMessage(callFunctionOnMessage, { socket })).toBe(true);
+  expect(handler.handleDebuggerMessage(callFunctionOnMessage, { socket })).toBe(true);
   // Handler should respond with object ID pointer
   expect(socket.send).toBeCalledWith(
     JSON.stringify({

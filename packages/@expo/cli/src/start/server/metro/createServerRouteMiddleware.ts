@@ -6,7 +6,6 @@
  */
 
 import type { ProjectConfig } from '@expo/config';
-import type { ExpoRequest, ExpoResponse } from '@expo/server';
 import resolve from 'resolve';
 import resolveFrom from 'resolve-from';
 import { promisify } from 'util';
@@ -29,7 +28,7 @@ export function createRouteHandlerMiddleware(
   options: {
     appDir: string;
     routerRoot: string;
-    getHtml?: (req: ExpoRequest) => Promise<ExpoResponse>;
+    getHtml?: (req: Request) => Promise<Response>;
     getStaticPageAsync: (pathname: string) => Promise<{ content: string }>;
     bundleApiRoute: (
       functionFilePath: string

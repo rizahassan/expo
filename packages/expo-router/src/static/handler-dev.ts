@@ -1,4 +1,3 @@
-import { ExpoResponse } from 'expo-router/server';
 import { Readable, Writable } from 'node:stream';
 // import { createServer as createViteServer } from 'vite';
 // import viteReact from '@vitejs/plugin-react';
@@ -116,7 +115,7 @@ export function createHandler<Context, Req extends Request, Res extends Response
   };
 
   return async (req) => {
-    // const res = new ExpoResponse();
+    // const res = new Response();
     // // const basePrefix = options.config.basePath + options.config.rscPath + '/';
     // const handleError = (err: unknown) => {
     //   if (hasStatusCode(err)) {
@@ -171,7 +170,7 @@ export function createHandler<Context, Req extends Request, Res extends Response
       rootDir: options.projectRoot,
       loadServerFile,
     });
-    const res = new ExpoResponse(readable, {
+    const res = new Response(readable, {
       status: 200,
       headers: {
         'content-type': 'text/html; charset=utf-8',

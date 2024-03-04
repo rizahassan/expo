@@ -7,9 +7,7 @@
 import { getConfig } from '@expo/config';
 import * as runtimeEnv from '@expo/env';
 import { SerialAsset } from '@expo/metro-config/build/serializer/serializerAssets';
-import { ExpoRequest, ExpoResponse } from '@expo/server';
 import { RequestHandler, convertRequest, respond } from '@expo/server/build/vendor/http';
-import { createReadableStreamFromReadable } from '@remix-run/node';
 import assert from 'assert';
 import chalk from 'chalk';
 import {
@@ -71,7 +69,6 @@ import {
   getRscPathFromExpoConfig,
   getBaseUrlFromExpoConfig,
   shouldEnableAsyncImports,
-  createBundleUrlPathFromExpoConfig,
   createBundleUrlSearchParams,
 } from '../middleware/metroOptions';
 import { prependMiddleware } from '../middleware/mutations';
@@ -1113,7 +1110,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
     // eslint-disable-next-line @typescript-eslint/ban-types
     method: 'POST' | 'GET';
     platform: string;
-    req?: ExpoRequest;
+    req?: Request;
     engine?: 'hermes';
     entries?: EntriesPrd;
   }) {
@@ -1387,7 +1384,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
 
           const engine = url.searchParams.get('transform.engine');
           if (engine && !['hermes'].includes(engine)) {
-            return new ExpoResponse(
+            return new Response(
               `Query parameter "transform.engine" is an unsupported value: ${engine}`,
               {
                 status: 500,
@@ -1399,7 +1396,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
           }
           const platform = url.searchParams.get('platform') ?? req.headers.get('expo-platform');
           if (typeof platform !== 'string' || !platform) {
-            return new ExpoResponse('Missing expo-platform header or platform query parameter', {
+            return new Response('Missing expo-platform header or platform query parameter', {
               status: 500,
               headers: {
                 'Content-Type': 'text/plain',
@@ -1412,7 +1409,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
           try {
             route = decodeInput(encodedInput);
           } catch {
-            return new ExpoResponse(`Invalid encoded input: "${encodedInput}"`, {
+            return new Response(`Invalid encoded input: "${encodedInput}"`, {
               status: 400,
               headers: {
                 'Content-Type': 'text/plain',
@@ -1450,19 +1447,16 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
             // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
             const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
 
-            return new ExpoResponse(
-              `Metro Bundler encountered an error: ` + sanitizedServerMessage,
-              {
-                status: 500,
-                headers: {
-                  'Content-Type': 'text/plain',
-                },
-              }
-            );
+            return new Response(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain',
+              },
+            });
           }
 
           console.log('pipe:', pipe);
-          const response = new ExpoResponse(pipe, {
+          const response = new Response(pipe, {
             headers: {
               // Set headers for RSC
               // 'Content-Type': 'application/json; charset=UTF-8',
@@ -1569,7 +1563,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
               });
 
               // TODO: Memoize this stuff.
-              // const res = new ExpoResponse();
+              // const res = new Response();
 
               return await handler(req);
             },
@@ -1793,7 +1787,7 @@ export function getDeepLinkHandler(projectRoot: string): DeepLinkHandler {
  */
 export function createRequestHandler(
   projectRoot: string,
-  handleRequest: (request: ExpoRequest) => Promise<ExpoResponse>
+  handleRequest: (request: Request) => Promise<Response>
 ): RequestHandler {
   return async (req: ServerRequest, res: ServerResponse, next: ServerNext) => {
     if (!req?.url || !req.method) {
@@ -1818,20 +1812,20 @@ export function createRequestHandler(
         // Forward the Metro server to the client.
         // TODO: Cut out the middleman (metro dev server).
 
-        return await respond(res, ExpoResponse.json(error.rawObject, { status: 500 }));
+        return await respond(res, Response.json(error.rawObject, { status: 500 }));
       }
 
       if (error instanceof Error) {
         return await respond(
           res,
-          new ExpoResponse('Internal Server Error: ' + error.message, {
+          new Response('Internal Server Error: ' + error.message, {
             status: 500,
             headers: {
               'Content-Type': 'text/plain',
             },
           })
         );
-      } else if (error instanceof ExpoResponse) {
+      } else if (error instanceof Response) {
         return await respond(res, error);
       }
       // http doesn't support async functions, so we have to pass along the
@@ -1846,7 +1840,7 @@ function isSupportedRequestMethod(method: string): method is 'GET' | 'POST' {
   return method === 'GET' || method === 'POST';
 }
 function notAllowed(): never {
-  throw new ExpoResponse('Method Not Allowed', {
+  throw new Response('Method Not Allowed', {
     status: 405,
     headers: {
       'Content-Type': 'text/plain',

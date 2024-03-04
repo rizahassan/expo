@@ -30,6 +30,6 @@ export declare function createHandler<Context, Req extends Request, Res extends 
         stream?: ReadableStream | undefined;
         moduleIdCallback?: (id: string) => void;
     }) => Promise<readonly [ReadableStream, Context]>;
-}): (req: any) => Promise<Request>;
+}): (req: any) => Promise<Response>;
 export {};
 //# sourceMappingURL=handler-dev.d.ts.map

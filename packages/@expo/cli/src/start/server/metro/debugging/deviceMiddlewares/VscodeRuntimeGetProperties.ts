@@ -5,7 +5,7 @@ import {
   DebuggerMetadata,
   DebuggerRequest,
   DeviceResponse,
-  InspectorHandler,
+  DeviceMiddleware,
 } from './types';
 import { getDebuggerType } from './utils';
 
@@ -17,14 +17,14 @@ import { getDebuggerType } from './utils';
  * @see https://github.com/facebook/hermes/issues/114
  * @see https://github.com/microsoft/vscode-js-debug/issues/1583
  */
-export class VscodeRuntimeGetPropertiesHandler implements InspectorHandler {
+export class VscodeRuntimeGetPropertiesMiddleware implements DeviceMiddleware {
   /** Keep track of `Runtime.getProperties` responses to intercept, by request id */
   interceptGetProperties = new Set<number>();
 
-  onDebuggerMessage(
+  handleDebuggerMessage(
     message: DebuggerRequest<RuntimeGetProperties>,
     { userAgent }: DebuggerMetadata
-  ): boolean {
+  ) {
     if (getDebuggerType(userAgent) === 'vscode' && message.method === 'Runtime.getProperties') {
       this.interceptGetProperties.add(message.id);
     }
@@ -33,7 +33,10 @@ export class VscodeRuntimeGetPropertiesHandler implements InspectorHandler {
     return false;
   }
 
-  onDeviceMessage(message: DeviceResponse<RuntimeGetProperties>, { userAgent }: DebuggerMetadata) {
+  handleDeviceMessage(
+    message: DeviceResponse<RuntimeGetProperties>,
+    { userAgent }: DebuggerMetadata
+  ) {
     if (
       getDebuggerType(userAgent) === 'vscode' &&
       'id' in message &&

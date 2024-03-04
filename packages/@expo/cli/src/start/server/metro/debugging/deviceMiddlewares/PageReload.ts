@@ -1,12 +1,12 @@
 import type { Protocol } from 'devtools-protocol';
 
-import { CdpMessage, DebuggerMetadata, DebuggerRequest, InspectorHandler } from './types';
+import { CdpMessage, DebuggerMetadata, DebuggerRequest, DeviceMiddleware } from './types';
 import { MetroBundlerDevServer } from '../../MetroBundlerDevServer';
 
-export class PageReloadHandler implements InspectorHandler {
+export class PageReloadMiddleware implements DeviceMiddleware {
   constructor(private readonly metroBundler: MetroBundlerDevServer) {}
 
-  onDebuggerMessage(message: DebuggerRequest<PageReload>, { socket }: DebuggerMetadata) {
+  handleDebuggerMessage(message: DebuggerRequest<PageReload>, { socket }: DebuggerMetadata) {
     if (message.method === 'Page.reload') {
       this.metroBundler.broadcastMessage('reload');
       socket.send(JSON.stringify({ id: message.id }));

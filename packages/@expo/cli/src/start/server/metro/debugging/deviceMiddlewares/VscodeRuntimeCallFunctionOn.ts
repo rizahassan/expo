@@ -5,7 +5,7 @@ import {
   DebuggerMetadata,
   DebuggerRequest,
   DeviceResponse,
-  InspectorHandler,
+  DeviceMiddleware,
 } from './types';
 import { getDebuggerType, respond } from './utils';
 
@@ -16,11 +16,11 @@ import { getDebuggerType, respond } from './utils';
  * @see https://github.com/expo/vscode-expo/issues/231
  * @see https://github.com/microsoft/vscode-js-debug/blob/dcccaf3972d675cc1e5c776450bb4c3dc8c178c1/src/adapter/stackTrace.ts#L319-L324
  */
-export class VscodeRuntimeCallFunctionOnHandler implements InspectorHandler {
-  onDebuggerMessage(
+export class VscodeRuntimeCallFunctionOnMiddleware implements DeviceMiddleware {
+  handleDebuggerMessage(
     message: DebuggerRequest<RuntimeCallFunctionOn>,
     { socket, userAgent }: DebuggerMetadata
-  ): boolean {
+  ) {
     if (getDebuggerType(userAgent) === 'vscode' && message.method === 'Runtime.callFunctionOn') {
       return respond<DeviceResponse<RuntimeCallFunctionOn>>(socket, {
         id: message.id,

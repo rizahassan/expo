@@ -1,6 +1,6 @@
 import Protocol from 'devtools-protocol';
 
-import { CdpMessage, DebuggerMetadata, DebuggerRequest, InspectorHandler } from './types';
+import { CdpMessage, DebuggerMetadata, DebuggerRequest, DeviceMiddleware } from './types';
 import { getDebuggerType } from './utils';
 
 /**
@@ -9,11 +9,11 @@ import { getDebuggerType } from './utils';
  * Hermes needs to create the breakpoint to get the proper ID, but it must be unbounded.
  * Once the sourcemap is loaded, vscode will rebind the unbounded breakpoint to the correct location (using `Debugger.setBreakpoint`).
  */
-export class VscodeDebuggerSetBreakpointByUrlHandler implements InspectorHandler {
-  onDebuggerMessage(
+export class VscodeDebuggerSetBreakpointByUrlMiddleware implements DeviceMiddleware {
+  handleDebuggerMessage(
     message: DebuggerRequest<DebuggerSetBreakpointByUrl>,
     { userAgent }: DebuggerMetadata
-  ): boolean {
+  ) {
     if (
       getDebuggerType(userAgent) === 'vscode' &&
       message.method === 'Debugger.setBreakpointByUrl' &&

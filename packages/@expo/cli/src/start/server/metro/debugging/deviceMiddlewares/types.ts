@@ -2,18 +2,19 @@ import type { unstable_Device } from '@react-native/dev-middleware';
 
 export type DebuggerMetadata = NonNullable<unstable_Device['_debuggerConnection']>;
 
-export interface InspectorHandler {
+// TODO: use `@react-native/dev-middleware` type instead
+export interface DeviceMiddleware {
   /**
    * Intercept a message coming from the device, modify or respond to it through `this._sendMessageToDevice`.
    * Return `true` if the message was handled, this will stop the message propagation.
    */
-  onDeviceMessage?(message: DeviceRequest | DeviceResponse, info: DebuggerMetadata): boolean;
+  handleDeviceMessage?(message: DeviceRequest | DeviceResponse, info: DebuggerMetadata): boolean;
 
   /**
    * Intercept a message coming from the debugger, modify or respond to it through `socket.send`.
    * Return `true` if the message was handled, this will stop the message propagation.
    */
-  onDebuggerMessage?(message: DebuggerRequest, info: DebuggerMetadata): boolean;
+  handleDebuggerMessage?(message: DebuggerRequest, info: DebuggerMetadata): boolean;
 }
 
 /**

@@ -5,7 +5,7 @@ import {
   DebuggerMetadata,
   DebuggerRequest,
   DeviceResponse,
-  InspectorHandler,
+  DeviceMiddleware,
 } from './types';
 import { getDebuggerType, respond } from './utils';
 
@@ -13,11 +13,11 @@ import { getDebuggerType, respond } from './utils';
  * Hermes doesn't seem to handle this request, but `locations` have to be returned.
  * Respond with an empty location to make it "spec compliant" with Chrome DevTools.
  */
-export class VscodeDebuggerGetPossibleBreakpointsHandler implements InspectorHandler {
-  onDebuggerMessage(
+export class VscodeDebuggerGetPossibleBreakpointsMiddleware implements DeviceMiddleware {
+  handleDebuggerMessage(
     message: DebuggerRequest<DebuggerGetPossibleBreakpoints>,
     { socket, userAgent }: DebuggerMetadata
-  ): boolean {
+  ) {
     if (
       getDebuggerType(userAgent) === 'vscode' &&
       message.method === 'Debugger.getPossibleBreakpoints'

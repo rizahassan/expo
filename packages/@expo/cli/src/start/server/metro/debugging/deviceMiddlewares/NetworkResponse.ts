@@ -2,7 +2,7 @@ import type { Protocol } from 'devtools-protocol';
 
 import {
   CdpMessage,
-  InspectorHandler,
+  DeviceMiddleware,
   DebuggerMetadata,
   DeviceRequest,
   DebuggerRequest,
@@ -11,11 +11,11 @@ import {
 } from './types';
 import { respond } from './utils';
 
-export class NetworkResponseHandler implements InspectorHandler {
+export class NetworkResponseMiddleware implements DeviceMiddleware {
   /** All known responses, mapped by request id */
   storage = new Map<string, DebuggerResponse<NetworkGetResponseBody>['result']>();
 
-  onDeviceMessage(message: DeviceRequest<NetworkReceivedResponseBody>) {
+  handleDeviceMessage(message: DeviceRequest<NetworkReceivedResponseBody>) {
     if (message.method === 'Expo(Network.receivedResponseBody)') {
       const { requestId, ...requestInfo } = message.params;
       this.storage.set(requestId, requestInfo);
@@ -25,7 +25,7 @@ export class NetworkResponseHandler implements InspectorHandler {
     return false;
   }
 
-  onDebuggerMessage(
+  handleDebuggerMessage(
     message: DebuggerRequest<NetworkGetResponseBody>,
     { socket }: DebuggerMetadata
   ) {

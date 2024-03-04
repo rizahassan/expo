@@ -1,7 +1,7 @@
 import { unstable_Device as MetroDevice } from '@react-native/dev-middleware';
 import Protocol from 'devtools-protocol';
 
-import { CdpMessage, DebuggerMetadata, DeviceRequest, InspectorHandler } from './types';
+import { CdpMessage, DebuggerMetadata, DeviceRequest, DeviceMiddleware } from './types';
 import { getDebuggerType } from './utils';
 
 /** Android's stock emulator and other emulators such as genymotion use a standard localhost alias. */
@@ -15,10 +15,13 @@ const FILE_PREFIX = 'file://';
  * Unfortunately, that causes a multi-second delay in VS Code (±5s).
  * This handler disables inlining the source maps for VS Code only.
  */
-export class VscodeDebuggerScriptParsedHandler implements InspectorHandler {
+export class VscodeDebuggerScriptParsedMiddleware implements DeviceMiddleware {
   constructor(private readonly device: MetroDevice) {}
 
-  onDeviceMessage(message: DeviceRequest<DebuggerScriptParsed>, debuggerInfo: DebuggerMetadata) {
+  handleDeviceMessage(
+    message: DeviceRequest<DebuggerScriptParsed>,
+    debuggerInfo: DebuggerMetadata
+  ) {
     if (
       getDebuggerType(debuggerInfo.userAgent) !== 'vscode' ||
       message.method !== 'Debugger.scriptParsed'

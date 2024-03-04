@@ -74,7 +74,6 @@ function renderRouter(context = './app', { initialUrl = '/', ...options } = {}) 
         ...options,
     });
     return Object.assign(result, {
-        ctx,
         getPathname() {
             return router_store_1.store.routeInfoSnapshot().pathname;
         },
@@ -124,6 +123,10 @@ exports.testRouter = {
         if (path) {
             expect(react_native_1.screen).toHavePathnameWithParams(path);
         }
+    },
+    /** If there's history that supports invoking the `back` function. */
+    dismissAll() {
+        (0, react_native_1.act)(() => imperative_api_1.router.dismissAll());
     },
 };
 //# sourceMappingURL=index.js.map

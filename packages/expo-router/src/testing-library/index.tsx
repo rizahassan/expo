@@ -129,7 +129,7 @@ export const testRouter = {
     expect(screen).toHavePathnameWithParams(path);
   },
   /** Go back in history and asset the new pathname */
-  back(path: string) {
+  back(path?: string) {
     expect(router.canGoBack()).toBe(true);
     act(() => router.back());
     if (path) {
@@ -146,5 +146,9 @@ export const testRouter = {
     if (path) {
       expect(screen).toHavePathnameWithParams(path);
     }
+  },
+  /** If there's history that supports invoking the `back` function. */
+  dismissAll() {
+    act(() => router.dismissAll());
   },
 };

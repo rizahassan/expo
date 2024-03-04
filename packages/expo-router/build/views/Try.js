@@ -1,4 +1,3 @@
-'use client';
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -23,19 +22,16 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Try = void 0;
-const react_1 = __importDefault(require("react"));
-const SplashScreen = __importStar(require("expo-splash-screen"));
-// No way to access `getDerivedStateFromError` from a functional component afaict.
-class Try extends react_1.default.Component {
+const react_1 = __importStar(require("react"));
+const Splash_1 = require("./Splash");
+// No way to access `getDerivedStateFromError` from a function component afaict.
+class Try extends react_1.Component {
     state = { error: undefined };
     static getDerivedStateFromError(error) {
         // Force hide the splash screen if an error occurs.
-        SplashScreen.hideAsync();
+        Splash_1.SplashScreen.hideAsync();
         return { error };
     }
     retry = () => {

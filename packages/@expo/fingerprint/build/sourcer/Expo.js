@@ -85,7 +85,18 @@ exports.getExpoConfigSourcesAsync = getExpoConfigSourcesAsync;
 function normalizeExpoConfig(config) {
     // Deep clone by JSON.parse/stringify that assumes the config is serializable.
     const normalizedConfig = JSON.parse(JSON.stringify(config));
-    delete normalizedConfig.runtimeVersion;
+    if (typeof normalizedConfig.runtimeVersion === 'string') {
+        delete normalizedConfig.runtimeVersion;
+    }
+    if (typeof normalizedConfig.android?.runtimeVersion === 'string') {
+        delete normalizedConfig.android.runtimeVersion;
+    }
+    if (typeof normalizedConfig.ios?.runtimeVersion === 'string') {
+        delete normalizedConfig.ios.runtimeVersion;
+    }
+    if (typeof normalizedConfig.web?.runtimeVersion === 'string') {
+        delete normalizedConfig.web.runtimeVersion;
+    }
     delete normalizedConfig._internal;
     return (0, Utils_1.stringifyJsonSorted)(normalizedConfig);
 }
@@ -125,6 +136,14 @@ async function getExpoAutolinkingAndroidSourcesAsync(projectRoot, options) {
                 project.sourceDir = filePath; // use relative path for the dir
                 debug(`Adding expo-modules-autolinking android dir - ${chalk_1.default.dim(filePath)}`);
                 results.push({ type: 'dir', filePath, reasons });
+            }
+            if (module.plugins) {
+                for (const plugin of module.plugins) {
+                    const filePath = path_1.default.relative(projectRoot, plugin.sourceDir);
+                    plugin.sourceDir = filePath; // use relative path for the dir
+                    debug(`Adding expo-modules-autolinking android dir - ${chalk_1.default.dim(filePath)}`);
+                    results.push({ type: 'dir', filePath, reasons });
+                }
             }
         }
         results.push({

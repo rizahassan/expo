@@ -1,8 +1,8 @@
+// Copyright © 2024 650 Industries.
 'use client';
-import { Platform } from 'expo-modules-core';
 import * as React from 'react';
+import { Platform, processColor } from 'react-native';
 import NativeLinearGradient from './NativeLinearGradient';
-import processColor from './processColor';
 /**
  * Renders a native view that transitions between multiple colors in a linear direction.
  */

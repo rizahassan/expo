@@ -1,4 +1,7 @@
+// Copyright © 2024 650 Industries.
+
 'use client';
+
 import { Platform } from 'expo-modules-core';
 import * as React from 'react';
 import { ViewProps } from 'react-native';

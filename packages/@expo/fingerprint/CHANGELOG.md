@@ -6,11 +6,16 @@
 
 ### 🎉 New features
 
+- Add silent option. ([#27325](https://github.com/expo/expo/pull/27325) by [@wschurman](https://github.com/wschurman))
+
 ### 🐛 Bug fixes
 
 - Fix fingerprint of ios (xcode projects). ([#26901](https://github.com/expo/expo/pull/26901) by [@wschurman](https://github.com/wschurman))
+- Fix inconsistent hashes for autolinking. ([#27390](https://github.com/expo/expo/pull/27390) by [@wschurman](https://github.com/wschurman))
 
 ### 💡 Others
+
+- Remove runtimeVersion from ignore normalization of expo config when policy. ([#27141](https://github.com/expo/expo/pull/27141) by [@wschurman](https://github.com/wschurman))
 
 ## 0.6.0 — 2023-12-12
 

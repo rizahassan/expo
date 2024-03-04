@@ -6,9 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createGetIdForRoute = exports.getQualifiedRouteComponent = exports.useSortedScreens = void 0;
 const react_1 = __importDefault(require("react"));
 const Route_1 = require("./Route");
+const import_mode_1 = __importDefault(require("./import-mode"));
 const primitives_1 = require("./primitives");
-const client_1 = require("./rsc/client");
 const EmptyRoute_1 = require("./views/EmptyRoute");
+const SuspenseFallback_1 = require("./views/SuspenseFallback");
 const Try_1 = require("./views/Try");
 function getSortedChildren(children, order, initialRouteName) {
     if (!order?.length) {
@@ -91,108 +92,42 @@ function fromLoadedRoute(res) {
 // TODO: Maybe there's a more React-y way to do this?
 // Without this store, the process enters a recursive loop.
 const qualifiedStore = new WeakMap();
-let i = 0;
 /** Wrap the component with various enhancements and add access to child routes. */
 function getQualifiedRouteComponent(value) {
     if (qualifiedStore.has(value)) {
         return qualifiedStore.get(value);
     }
     let ScreenComponent;
-    // getLoadable = (props: any, ref: any) => (
-    //   <React.Suspense fallback={<SuspenseFallback route={value} />}>
-    //     <ServerComponentHost $$route={value.route} segment={value.route} />
-    //     {/* <AsyncComponent
-    //       {...{
-    //         ...props,
-    //         ref,
-    //         // Expose the template segment path, e.g. `(home)`, `[foo]`, `index`
-    //         // the intention is to make it possible to deduce shared routes.
-    //         segment: value.route,
-    //       }}
-    //     /> */}
-    //   </React.Suspense>
-    // );
     // TODO: This ensures sync doesn't use React.lazy, but it's not ideal.
-    // if (EXPO_ROUTER_IMPORT_MODE === 'lazy') {
-    //   ScreenComponent = React.lazy(async () => {
-    //     const res = value.loadRoute();
-    //     return fromLoadedRoute(res) as Promise<{
-    //       default: React.ComponentType<any>;
-    //     }>;
-    //   });
-    // } else {
-    //   const res = value.loadRoute
-    //     ? value.loadRoute()
-    //     : (() => {
-    //         throw new Error(`Route "${value.route}" has no loadRoute method.`);
-    //       })();
-    //   const Component = fromImport(res).default as React.ComponentType<any>;
-    //   ScreenComponent = React.forwardRef((props, ref) => {
-    //     return <Component {...props} ref={ref} />;
-    //   });
-    // }
-    // const res = value.route
-    //   ? value.loadRoute()
-    //   : (() => {
-    //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
-    //     })();
-    // const Component = fromImport(res).default as React.ComponentType<any>;
-    ScreenComponent = react_1.default.forwardRef((props, ref) => {
-        // const prefetch = usePrefetchLocation();
-        let rscServerId = typeof window === 'undefined' ? 'TODO' : window.location.pathname;
-        if (value.type === 'route') {
-            rscServerId += '/page';
-        }
-        if (i > 20) {
-            debugger;
-            throw new Error('Too many iterations');
-        }
-        i++;
-        rscServerId = rscServerId.replace(/^\/+/, '');
-        console.log('Slot>>', rscServerId, i);
-        // debugger;
-        // const refetch = useRefetch();
-        react_1.default.useEffect(() => {
-            // refetch(value.contextKey);
-            // refetch(rscServerId);
-        }, [rscServerId]);
-        return react_1.default.useMemo(() => {
-            console.log('Slot.2>>', rscServerId);
-            // if (value.type === 'layout') {
-            //   // const res = ctx(value.route)
-            //   //   ? value.loadRoute()
-            //   //   : (() => {
-            //   //       throw new Error(`Route "${value.route}" has no loadRoute method.`);
-            //   //     })();
-            //   console.log();
-            //   if (ctx.keys().includes(value.contextKey)) {
-            //     const Component = ctx(value.contextKey).default as React.ComponentType<any>;
-            //     return <Component {...props} ref={ref} />;
-            //   } else {
-            //     console.log('Falling back on missing component', value.contextKey);
-            //     const Navigator = require('./views/Navigator').DefaultNavigator;
-            //     return <Navigator {...props} ref={ref} />;
-            //   }
-            // }
-            return (<client_1.Slot id={rscServerId} fallback={<div>
-              RSC Slot Fallback ({rscServerId} - {value.contextKey})
-            </div>}/>);
-        }, []);
-    });
-    const getLoadable = (props, ref) => (<ScreenComponent {...{
+    if (import_mode_1.default === 'lazy') {
+        ScreenComponent = react_1.default.lazy(async () => {
+            const res = value.loadRoute();
+            return fromLoadedRoute(res);
+        });
+    }
+    else {
+        const res = value.loadRoute();
+        const Component = fromImport(res).default;
+        ScreenComponent = react_1.default.forwardRef((props, ref) => {
+            return <Component {...props} ref={ref}/>;
+        });
+    }
+    const getLoadable = (props, ref) => (<react_1.default.Suspense fallback={<SuspenseFallback_1.SuspenseFallback route={value}/>}>
+      <ScreenComponent {...{
         ...props,
         ref,
         // Expose the template segment path, e.g. `(home)`, `[foo]`, `index`
         // the intention is to make it possible to deduce shared routes.
         segment: value.route,
-    }}/>);
+    }}/>
+    </react_1.default.Suspense>);
     const QualifiedRoute = react_1.default.forwardRef(({ 
     // Remove these React Navigation props to
     // enforce usage of expo-router hooks (where the query params are correct).
     route, navigation, 
     // Pass all other props to the component
     ...props }, ref) => {
-        const loadable = react_1.default.useMemo(() => getLoadable(props, ref), []);
+        const loadable = getLoadable(props, ref);
         return <Route_1.Route node={value}>{loadable}</Route_1.Route>;
     });
     QualifiedRoute.displayName = `Route(${value.route})`;
@@ -210,9 +145,7 @@ function createGetIdForRoute(route) {
     }
     return ({ params = {} } = {}) => {
         const segments = [];
-        const unprocessedParams = new Set(Object.keys(params));
         for (const dynamic of include.values()) {
-            unprocessedParams.delete(dynamic.name);
             const value = params?.[dynamic.name];
             if (Array.isArray(value) && value.length > 0) {
                 // If we are an array with a value
@@ -229,31 +162,7 @@ function createGetIdForRoute(route) {
                 segments.push(`[${dynamic.name}]`);
             }
         }
-        let id = segments.join('/');
-        const searchParams = [];
-        if (route.children?.length === 0) {
-            /**
-             * Child routes IDs are a combination of their dynamic segments and the search parameters
-             * As search parameters can be anything, we build an exclude list of its parents dynamic segments.
-             */
-            for (const key of unprocessedParams) {
-                // These are internal React Navigation values and should not be included
-                if (key === 'screen' || key === 'params') {
-                    continue;
-                }
-                searchParams.push(`${key}=${params[key]}`);
-            }
-        }
-        if (searchParams.length) {
-            // Return the context key if there is no id. This way we can at least ensure its the same route
-            id = `${id || route.contextKey}?${searchParams.join('&')}`;
-        }
-        /**
-         * We should always return a truthy value, failing to do so will cause React Navigation to
-         * fall back to `key` based navigation. This is an issue for search parameters where are either
-         * part of the key or the id.
-         */
-        return id;
+        return segments.join('/') ?? route.contextKey;
     };
 }
 exports.createGetIdForRoute = createGetIdForRoute;

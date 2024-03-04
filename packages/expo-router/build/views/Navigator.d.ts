@@ -15,7 +15,7 @@ export type NavigatorProps = {
     router?: Parameters<typeof useNavigationBuilder>[0];
 };
 /** An unstyled custom navigator. Good for basic web layouts */
-export declare function Navigator({ initialRouteName, screenOptions, children, router }: NavigatorProps): React.JSX.Element | null;
+export declare function Navigator({ initialRouteName, screenOptions, children, router }: NavigatorProps): JSX.Element | null;
 export declare namespace Navigator {
     var Slot: typeof import("./Navigator").Slot;
     var useContext: typeof useNavigatorContext;
@@ -114,7 +114,6 @@ export declare function useNavigatorContext(): {
         }>>): void;
         goBack(): void;
         isFocused(): boolean;
-        /** Used to configure route settings. */
         canGoBack(): boolean;
         getId(): string | undefined;
         getParent<T = import("@react-navigation/native").NavigationHelpers<import("@react-navigation/native").ParamListBase, {}> | undefined>(id?: string | undefined): T;
@@ -273,8 +272,8 @@ export declare function useNavigatorContext(): {
 };
 export declare function useSlot(): JSX.Element | null;
 /** Renders the currently selected content. */
-export declare function Slot(props: Omit<NavigatorProps, 'children'>): React.JSX.Element;
+export declare function Slot(props: Omit<NavigatorProps, 'children'>): JSX.Element;
 export declare function QualifiedSlot(): JSX.Element | null;
-export declare function DefaultNavigator(): React.JSX.Element;
+export declare function DefaultNavigator(): JSX.Element;
 export {};
 //# sourceMappingURL=Navigator.d.ts.map

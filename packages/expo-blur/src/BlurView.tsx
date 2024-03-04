@@ -1,9 +1,16 @@
+// Copyright © 2024 650 Industries.
+
+'use client';
+
+import { requireNativeViewManager } from 'expo-modules-core';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { BlurViewProps } from './BlurView.types';
-import NativeBlurView from './NativeExpoBlurView';
 
+const NativeBlurView = requireNativeViewManager('ExpoBlurView');
+
+// TODO: Class components are not supported with React Server Components.
 export default class BlurView extends React.Component<BlurViewProps> {
   blurViewRef? = React.createRef<typeof NativeBlurView>();
 

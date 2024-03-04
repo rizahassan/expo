@@ -1,24 +1,11 @@
-import OS from 'expo-router/os';
+import { Platform as ReactNativePlatform } from 'react-native';
 import { isDOMAvailable, canUseEventListeners, canUseViewport, isAsyncDebugging, } from './environment/browser';
-function select(specifics) {
-    if (specifics.hasOwnProperty(OS)) {
-        return specifics[OS];
-    }
-    else if (OS !== 'web' && specifics.hasOwnProperty('native')) {
-        return specifics.native;
-    }
-    else if (specifics.hasOwnProperty('default')) {
-        return specifics.default;
-    }
-    return undefined;
-    // do nothing...
-}
 const Platform = {
     /**
      * Denotes the currently running platform.
      * Can be one of ios, android, web.
      */
-    OS,
+    OS: ReactNativePlatform.OS,
     /**
      * Returns the value with the matching platform.
      * Object keys can be any of ios, android, native, web, default.
@@ -27,7 +14,7 @@ const Platform = {
      * @android android, native, default
      * @web web, default
      */
-    select: select,
+    select: ReactNativePlatform.select,
     /**
      * Denotes if the DOM API is available in the current environment.
      * The DOM is not available in native React runtimes and Node.js.

@@ -52,8 +52,8 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-let StackTrace: React.FC<{ logData: LogBoxLog | null }>;
-let ErrorMessageText: React.FC<{ text: string; style: TextStyle }>;
+let StackTrace: React.ComponentType<{ logData: LogBoxLog | null }>;
+let ErrorMessageText: React.ComponentType<{ text: string; style: TextStyle }>;
 
 if (process.env.NODE_ENV === 'development') {
   const { Ansi } =

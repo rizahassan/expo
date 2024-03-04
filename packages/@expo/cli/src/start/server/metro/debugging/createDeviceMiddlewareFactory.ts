@@ -26,12 +26,12 @@ export function createDeviceMiddlewareFactory(
     ];
 
     return {
-      handleDeviceMessage: (message: any, info: DebuggerMetadata) => {
+      handleDeviceMessage(message: any, info: DebuggerMetadata) {
         return middlewares.some(
           (middleware) => middleware.handleDeviceMessage?.(message, info) ?? false
         );
       },
-      handleDebuggerMessage: (message: any, info: DebuggerMetadata) => {
+      handleDebuggerMessage(message: any, info: DebuggerMetadata) {
         return middlewares.some(
           (middleware) => middleware.handleDebuggerMessage?.(message, info) ?? false
         );

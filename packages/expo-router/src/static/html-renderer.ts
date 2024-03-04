@@ -1,11 +1,3 @@
-import type * as RDServerType from 'react-dom/server.edge';
-import type { default as RSDWClientType } from 'react-server-dom-webpack/client.edge';
-import { injectRSCPayload } from 'rsc-html-stream/server';
-
-import type * as WakuClientType from '../rsc/client';
-// import type { ResolvedConfig } from '../config.js';
-// import type { CLIENT_MODULE_KEY } from '../handlers/handler-dev.js';
-
 import type {
   default as ReactType,
   createElement as createElementType,
@@ -13,16 +5,22 @@ import type {
   FunctionComponent,
   ComponentProps,
 } from 'react';
+import { createElement } from 'react';
+import type * as RDServerType from 'react-dom/server.edge';
+import { renderToReadableStream } from 'react-dom/server.edge';
+import type { default as RSDWClientType } from 'react-server-dom-webpack/client.edge';
+import { createFromReadableStream } from 'react-server-dom-webpack/client.edge';
+import { injectRSCPayload } from 'rsc-html-stream/server';
 
 import { encodeInput, hasStatusCode } from './utils';
-import { joinPath, filePathToFileURL, fileURLToFilePath } from '../rsc/path';
-import { concatUint8Arrays } from '../rsc/stream';
+import type * as WakuClientType from '../rsc/client';
+// import type { ResolvedConfig } from '../config.js';
+// import type { CLIENT_MODULE_KEY } from '../handlers/handler-dev.js';
 
-import { createElement } from 'react';
-import { renderToReadableStream } from 'react-dom/server.edge';
-import { createFromReadableStream } from 'react-server-dom-webpack/client.edge';
 import { ServerRoot } from '../rsc/client';
+import { joinPath, filePathToFileURL, fileURLToFilePath } from '../rsc/path';
 import { EntriesPrd } from '../rsc/server';
+import { concatUint8Arrays } from '../rsc/stream';
 
 type ResolvedConfig = any;
 

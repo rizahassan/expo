@@ -1,6 +1,5 @@
-"use strict";
 /* eslint-env browser */
-Object.defineProperty(exports, "__esModule", { value: true });
+// import OS from 'expo-router/os';
 function createWebSocketConnection(path = '/message') {
     const getDevServer = require('react-native/Libraries/Core/Devtools/getDevServer');
     const devServer = getDevServer();

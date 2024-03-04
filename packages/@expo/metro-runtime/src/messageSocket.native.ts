@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import OS from 'expo-router/os';
+// import OS from 'expo-router/os';
 
 function createWebSocketConnection(path: string = '/message') {
   const getDevServer = require('react-native/Libraries/Core/Devtools/getDevServer');

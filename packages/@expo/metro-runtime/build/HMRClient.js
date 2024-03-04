@@ -131,24 +131,17 @@ const HMRClient = {
     // It creates the HMR client but doesn't actually set up the socket yet.
     setup({ isEnabled, onError }) {
         assert(!hmrClient, 'Cannot initialize hmrClient twice');
-        const devServerUrl = typeof window === 'undefined' ? __DEV_SERVER_URL__ : window.location;
+        const devServerUrl = window.location;
         const serverScheme = devServerUrl.protocol === 'https:' ? 'wss' : 'ws';
         const client = new MetroHMRClient(`${serverScheme}://${devServerUrl.host}/hot`);
         hmrClient = client;
-        if (typeof window === 'undefined') {
-            if (typeof __DEV_SERVER_URL__ !== 'undefined') {
-                pendingEntryPoints.push(__DEV_SERVER_URL__.toString());
-            }
-        }
-        else {
-            const { fullBundleUrl } = (0, getDevServer_1.default)();
-            if (fullBundleUrl) {
-                pendingEntryPoints.push(
-                // HMRServer understands regular bundle URLs, so prefer that in case
-                // there are any important URL parameters we can't reconstruct from
-                // `setup()`'s arguments.
-                fullBundleUrl);
-            }
+        const { fullBundleUrl } = (0, getDevServer_1.default)();
+        if (fullBundleUrl) {
+            pendingEntryPoints.push(
+            // HMRServer understands regular bundle URLs, so prefer that in case
+            // there are any important URL parameters we can't reconstruct from
+            // `setup()`'s arguments.
+            fullBundleUrl);
         }
         client.on('connection-error', (e) => {
             let error = `Cannot connect to Metro.

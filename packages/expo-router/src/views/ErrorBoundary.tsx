@@ -112,15 +112,15 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-function useWrapper() {
-  if (Platform.OS === 'web') {
-    return View;
-  }
-  const inTabBar = React.useContext(BottomTabBarHeightContext);
-  const Wrapper = inTabBar ? View : SafeAreaView;
+const useWrapper =
+  Platform.OS === 'web'
+    ? () => View
+    : function useWrapper() {
+        const inTabBar = React.useContext(BottomTabBarHeightContext);
+        const Wrapper = inTabBar ? View : SafeAreaView;
 
-  return Wrapper;
-}
+        return Wrapper;
+      };
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   // TODO: Add digest support for RSC errors

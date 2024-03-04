@@ -15,8 +15,9 @@
 // },
 
 import * as React from 'react';
-import { getInitialURL, addEventListener } from '../../link/linking';
+
 import { extractExpoPathFromURL } from '../../fork/extractPathFromURL';
+import { getInitialURL, addEventListener } from '../../link/linking';
 
 function useInitialLocation() {
   const [initialUrl, setInitial] = React.useState(null);

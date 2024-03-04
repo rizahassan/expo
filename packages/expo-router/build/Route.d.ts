@@ -43,6 +43,6 @@ export declare function useContextKey(): string;
 /** Provides the matching routes and filename to the children. */
 export declare function Route({ children, node }: PropsWithChildren<{
     node: RouteNode;
-}>): JSX.Element;
+}>): React.JSX.Element;
 export { sortRoutesWithInitial, sortRoutes };
 //# sourceMappingURL=Route.d.ts.map

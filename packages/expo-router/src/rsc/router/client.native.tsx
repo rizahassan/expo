@@ -21,9 +21,10 @@ import type {
   MouseEvent,
   PropsWithChildren,
 } from 'react';
-
 import { Text } from 'react-native';
 
+import { useSkipMeta } from './SkipContext.js';
+import { useVirtualLocation } from './WindowLocationContext.js';
 import {
   getComponentIds,
   getSkipList,
@@ -33,8 +34,6 @@ import {
 } from './common.js';
 import type { RouteProps } from './common.js';
 import { prefetchRSC, Root, Slot, useRefetch } from '../client.js';
-import { useVirtualLocation } from './WindowLocationContext.js';
-import { useSkipMeta } from './SkipContext.js';
 
 declare global {
   interface ImportMeta {

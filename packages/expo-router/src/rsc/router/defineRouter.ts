@@ -9,11 +9,11 @@ import {
   SHOULD_SKIP_ID,
 } from './common.js';
 import type { RouteProps, ShouldSkip } from './common.js';
+import { ShouldSkipComponent } from './should-skip';
 import { Children, Slot } from '../client.js';
 import { getPathMapping, PathSpec } from '../path.js';
 import type { RenderEntries, GetBuildConfig, GetSsrConfig } from '../server.js';
 import { defineEntries } from '../server.js';
-import { ShouldSkipComponent } from './should-skip';
 
 export function defineRouter(
   getPathConfig: () => Promise<Iterable<{ path: PathSpec; isStatic?: boolean }>>,

@@ -2,15 +2,13 @@
 // enableScreens(false);
 
 import React from 'react';
-
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ErrorBoundary } from './views/ErrorBoundary';
-
-import { Router } from './rsc/router/client';
-import { ErrorBoundaryProps, Try } from './views/Try';
-import { LocationContext } from './rsc/router/WindowLocationContext';
 import { SkipMetaProvider } from './rsc/router/SkipContext';
+import { LocationContext } from './rsc/router/WindowLocationContext';
+import { Router } from './rsc/router/client';
+import { ErrorBoundary } from './views/ErrorBoundary';
+import { ErrorBoundaryProps, Try } from './views/Try';
 
 // Add root error recovery.
 function RootErrorBoundary(props: ErrorBoundaryProps) {

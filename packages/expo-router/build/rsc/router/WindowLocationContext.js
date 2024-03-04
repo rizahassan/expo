@@ -37,8 +37,8 @@ exports.useVirtualLocation = exports.LocationContext = void 0;
 // };
 // },
 const React = __importStar(require("react"));
-const linking_1 = require("../../link/linking");
 const extractPathFromURL_1 = require("../../fork/extractPathFromURL");
+const linking_1 = require("../../link/linking");
 function useInitialLocation() {
     const [initialUrl, setInitial] = React.useState(null);
     React.useEffect(() => {

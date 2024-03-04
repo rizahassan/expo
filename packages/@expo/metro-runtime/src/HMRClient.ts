@@ -146,25 +146,19 @@ const HMRClient: HMRClientNativeInterface = {
   setup({ isEnabled, onError }: { isEnabled: boolean; onError?: (error: Error) => void }) {
     assert(!hmrClient, 'Cannot initialize hmrClient twice');
 
-    const devServerUrl = typeof window === 'undefined' ? __DEV_SERVER_URL__ : window.location;
+    const devServerUrl = window.location;
     const serverScheme = devServerUrl.protocol === 'https:' ? 'wss' : 'ws';
     const client = new MetroHMRClient(`${serverScheme}://${devServerUrl.host}/hot`);
     hmrClient = client;
 
-    if (typeof window === 'undefined') {
-      if (typeof __DEV_SERVER_URL__ !== 'undefined') {
-        pendingEntryPoints.push(__DEV_SERVER_URL__.toString());
-      }
-    } else {
-      const { fullBundleUrl } = getDevServer();
-      if (fullBundleUrl) {
-        pendingEntryPoints.push(
-          // HMRServer understands regular bundle URLs, so prefer that in case
-          // there are any important URL parameters we can't reconstruct from
-          // `setup()`'s arguments.
-          fullBundleUrl
-        );
-      }
+    const { fullBundleUrl } = getDevServer();
+    if (fullBundleUrl) {
+      pendingEntryPoints.push(
+        // HMRServer understands regular bundle URLs, so prefer that in case
+        // there are any important URL parameters we can't reconstruct from
+        // `setup()`'s arguments.
+        fullBundleUrl
+      );
     }
 
     client.on('connection-error', (e: Error) => {

@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.defineRouter = void 0;
 const react_1 = require("react");
 const common_js_1 = require("./common.js");
+const should_skip_1 = require("./should-skip");
 const client_js_1 = require("../client.js");
 const path_js_1 = require("../path.js");
-const should_skip_1 = require("./should-skip");
 function defineRouter(getPathConfig, getComponent) {
     const pathConfigPromise = getPathConfig().then((pathConfig) => Array.from(pathConfig).map((item) => {
         const is404 = item.path.length === 1 && item.path[0].type === 'literal' && item.path[0].name === '404';

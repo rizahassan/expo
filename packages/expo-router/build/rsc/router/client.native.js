@@ -4,10 +4,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ServerRouter = exports.Router = exports.Link = exports.useLocation = exports.usePrefetchLocation = exports.useChangeLocation = void 0;
 const react_1 = require("react");
 const react_native_1 = require("react-native");
+const SkipContext_js_1 = require("./SkipContext.js");
+const WindowLocationContext_js_1 = require("./WindowLocationContext.js");
 const common_js_1 = require("./common.js");
 const client_js_1 = require("../client.js");
-const WindowLocationContext_js_1 = require("./WindowLocationContext.js");
-const SkipContext_js_1 = require("./SkipContext.js");
 const parseLocation = () => {
     if (globalThis.__WAKU_ROUTER_404__) {
         return { path: '/404', searchParams: new URLSearchParams() };

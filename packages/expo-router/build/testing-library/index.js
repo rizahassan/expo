@@ -74,6 +74,7 @@ function renderRouter(context = './app', { initialUrl = '/', ...options } = {}) 
         ...options,
     });
     return Object.assign(result, {
+        ctx,
         getPathname() {
             return router_store_1.store.routeInfoSnapshot().pathname;
         },

@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+
 import { DynamicConvention, RouteNode } from './Route';
 import {
   matchArrayGroupName,
@@ -7,7 +9,6 @@ import {
   removeSupportedExtensions,
 } from './matchers';
 import { RequireContext } from './types';
-import { Fragment } from 'react';
 
 export type Options = {
   ignore?: RegExp[];

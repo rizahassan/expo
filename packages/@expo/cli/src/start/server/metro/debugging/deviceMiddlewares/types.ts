@@ -48,14 +48,6 @@ export abstract class DeviceMiddleware {
   constructor(protected readonly deviceInfo: DeviceMetadata) {}
 
   /**
-   * Determine if the device has the native capability, and can handle specific features itself.
-   * These target capabilities are defined in `@react-native/dev-middleware`.
-   */
-  hasCapability(flag: keyof TargetCapabilityFlags): boolean {
-    return this.deviceInfo.page.capabilities[flag] === true;
-  }
-
-  /**
    * Intercept a message coming from the device, modify or respond to it through `this._sendMessageToDevice`.
    * Return `true` if the message was handled, this will stop the message propagation.
    */

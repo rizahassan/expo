@@ -8,13 +8,13 @@ it('is disabled when device capability includes `nativeNetworkInspection`', () =
 });
 
 it('is enabled when device capability is missing `nativeNetworkInspection`', () => {
-  const device = {} as DeviceMetadata;
+  const device = { page: { capabilities: {} } } as DeviceMetadata;
   const handler = new NetworkResponseMiddleware(device);
   expect(handler.isEnabled()).toBe(true);
 });
 
 it('responds to response body from device and debugger', () => {
-  const device = {} as DeviceMetadata;
+  const device = { page: { capabilities: {} } } as DeviceMetadata;
   const handler = new NetworkResponseMiddleware(device);
   const socket = { send: jest.fn() };
 

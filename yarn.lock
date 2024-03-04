@@ -13922,14 +13922,6 @@ metro-cache-key@0.80.6:
   resolved "https://registry.yarnpkg.com/metro-cache-key/-/metro-cache-key-0.80.6.tgz#48fe84477f6408478a33c363a8f5eaceea5cf853"
   integrity sha512-DFmjQacC8m/S3HpELklLMWkPGP/fZPX3BSgjd0xQvwIvWyFwk8Nn/lfp/uWdEVDtDSIr64/anXU5uWohGwlWXw==
 
-metro-cache@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-cache/-/metro-cache-0.80.3.tgz#89e6358d9f8940acdc7d4b5a1eb00ed8c45bca17"
-  integrity sha512-7gHcOIXdAHCBzsovF4b+VgcfIZtCpCIFiT2zx9amU58xrmkx+PRIl1KZDIUfRBbGrO9HJtZxH7lr7/hoiLIUWA==
-  dependencies:
-    metro-core "0.80.3"
-    rimraf "^3.0.2"
-
 metro-cache@0.80.6:
   version "0.80.6"
   resolved "https://registry.yarnpkg.com/metro-cache/-/metro-cache-0.80.6.tgz#05fdd83482f4132243b27713716c289532bd41c3"
@@ -13950,14 +13942,6 @@ metro-config@0.80.6, metro-config@^0.80.3:
     metro-cache "0.80.6"
     metro-core "0.80.6"
     metro-runtime "0.80.6"
-
-metro-core@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-core/-/metro-core-0.80.3.tgz#066407be0cee413f5d1a52ebb64d123eaa0fb388"
-  integrity sha512-X2ZfAvR55TdD/Rv9i4gYVI68JpRPHcpKpkr6IVtidFPoNjf4Fodh1qH7gEAJUnO5FL3a1JyPffbW6eFaXPxkFw==
-  dependencies:
-    lodash.throttle "^4.1.1"
-    metro-resolver "0.80.3"
 
 metro-core@0.80.6, metro-core@^0.80.3:
   version "0.80.6"
@@ -13992,22 +13976,10 @@ metro-minify-terser@0.80.6:
   dependencies:
     terser "^5.15.0"
 
-metro-resolver@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-resolver/-/metro-resolver-0.80.3.tgz#f9676508583d81182c7afaabc908254dc928a345"
-  integrity sha512-zwa0i32rj/TI3NivcvMXHJwTG2gUgo2dXdcnAJlhEKKQvyN+7AfhNdQSlDdDqMQmU7FaLRdeWORnQJbYCrprQQ==
-
 metro-resolver@0.80.6:
   version "0.80.6"
   resolved "https://registry.yarnpkg.com/metro-resolver/-/metro-resolver-0.80.6.tgz#b648b8c661bc4cf091efd11affa010dd11f58bec"
   integrity sha512-R7trfglG4zY4X9XyM9cvuffAhQ9W1reWoahr1jdEWa6rOI8PyM0qXjcsb8l+fsOQhdSiVlkKcYAmkyrs1S/zrA==
-
-metro-runtime@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-runtime/-/metro-runtime-0.80.3.tgz#8bf371f2bcd5ae332855fa40089c3b6f2a4f0aa1"
-  integrity sha512-16RKcwpxriNnPdE5eKWJu7/KLgxE+AaDAdYthoS6zbzjaOu7RiY2zPM1Elz175Rw//74kOwtKXgxTW8ADHB8SQ==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
 
 metro-runtime@0.80.6, metro-runtime@^0.80.3:
   version "0.80.6"
@@ -14015,20 +13987,6 @@ metro-runtime@0.80.6, metro-runtime@^0.80.3:
   integrity sha512-21GQVd0pp2nACoK0C2PL8mBsEhIFUFFntYrWRlYNHtPQoqDzddrPEIgkyaABGXGued+dZoBlFQl+LASlmmfkvw==
   dependencies:
     "@babel/runtime" "^7.0.0"
-
-metro-source-map@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-source-map/-/metro-source-map-0.80.3.tgz#25d88b05cb3383e9802d7543e29a57deacca07d7"
-  integrity sha512-5DYcOLPjDLx84ZCZ1i0DuWSPU7AY5G/7tR+u/WN6CZNxLyYEe3TwUBdIUgQj4HgZJl/zZ/7bGYJQOHd7ubuO0w==
-  dependencies:
-    "@babel/traverse" "^7.20.0"
-    "@babel/types" "^7.20.0"
-    invariant "^2.2.4"
-    metro-symbolicate "0.80.3"
-    nullthrows "^1.1.1"
-    ob1 "0.80.3"
-    source-map "^0.5.6"
-    vlq "^1.0.0"
 
 metro-source-map@0.80.6, metro-source-map@^0.80.3:
   version "0.80.6"
@@ -14042,18 +14000,6 @@ metro-source-map@0.80.6, metro-source-map@^0.80.3:
     nullthrows "^1.1.1"
     ob1 "0.80.6"
     source-map "^0.5.6"
-    vlq "^1.0.0"
-
-metro-symbolicate@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/metro-symbolicate/-/metro-symbolicate-0.80.3.tgz#7c7dacad94db3ef6a8576eff7efd32510d24a022"
-  integrity sha512-baIt8Ss2vTGbxolRTa5yg+tKVAIAB1OpwMzJ0FSUjLs+HDAzaOtSpGbNd3DPc+pzX8Gj/rdbDOA0wPuOhVsHKQ==
-  dependencies:
-    invariant "^2.2.4"
-    metro-source-map "0.80.3"
-    nullthrows "^1.1.1"
-    source-map "^0.5.6"
-    through2 "^2.0.1"
     vlq "^1.0.0"
 
 metro-symbolicate@0.80.6:
@@ -14097,7 +14043,7 @@ metro-transform-worker@0.80.6:
     metro-transform-plugins "0.80.6"
     nullthrows "^1.1.1"
 
-metro@0.80.3, metro@0.80.6, metro@^0.80.3:
+metro@0.80.6, metro@^0.80.3:
   version "0.80.6"
   resolved "https://registry.yarnpkg.com/metro/-/metro-0.80.6.tgz#11cf77700b8be767f6663c1d6f6ed287dd686535"
   integrity sha512-f6Nhnht9TxVRP6zdBq9J2jNdeDBxRmJFnjxhQS1GeCpokBvI6fTXq+wHTLz5jZA+75fwbkPSzBxBJzQa6xi0AQ==
@@ -14989,11 +14935,6 @@ nwsapi@^2.2.2:
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/nwsapi/-/nwsapi-2.2.2.tgz#e5418863e7905df67d51ec95938d67bf801f0bb0"
   integrity sha512-90yv+6538zuvUMnN+zCr8LuV6bPFdq50304114vJYJ8RDyK8D5O9Phpbd6SZWgI7PwzmmfN1upeOJlvybDSgCw==
-
-ob1@0.80.3:
-  version "0.80.3"
-  resolved "https://registry.yarnpkg.com/ob1/-/ob1-0.80.3.tgz#dd867fdf1ffe7863a3b32dc36dc220335a6e55f9"
-  integrity sha512-lKJ/Wp6eSyYKYKYds1lgiDRtD2j9nNhrhx4hwegxYXTBkWz4dqermZV+Bq0iw0SszUIb+fC+btNSXwc4AG1lBQ==
 
 ob1@0.80.6:
   version "0.80.6"

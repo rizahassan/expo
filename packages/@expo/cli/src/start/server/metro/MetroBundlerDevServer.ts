@@ -881,6 +881,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
           files.set(destRscFile, {
             contents: rsc,
             targetDomain: 'client',
+            rscId: input,
           });
 
           const clientBoundaries = getClientModules(input);

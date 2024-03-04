@@ -24,6 +24,8 @@ export type ExportAssetDescriptor = {
   assetId?: string;
   /** Expo Router route path for formatting the HTML output. */
   routeId?: string;
+  /** Expo Router route path for formatting the RSC output. */
+  rscId?: string;
   /** A key for grouping together output files by server- or client-side. */
   targetDomain?: 'server' | 'client';
 };
@@ -45,6 +47,7 @@ export async function persistMetroFilesAsync(files: ExportAssetMap, outputDir: s
 
   const assetEntries: [string, ExportAssetDescriptor][] = [];
   const routeEntries: [string, ExportAssetDescriptor][] = [];
+  const rscEntries: [string, ExportAssetDescriptor][] = [];
   const remainingEntries: [string, ExportAssetDescriptor][] = [];
 
   let hasServerOutput = false;
@@ -52,6 +55,7 @@ export async function persistMetroFilesAsync(files: ExportAssetMap, outputDir: s
     hasServerOutput = hasServerOutput || asset[1].targetDomain === 'server';
     if (asset[1].assetId) assetEntries.push(asset);
     else if (asset[1].routeId != null) routeEntries.push(asset);
+    else if (asset[1].rscId != null) rscEntries.push(asset);
     else remainingEntries.push(asset);
   }
 
@@ -68,6 +72,22 @@ export async function persistMetroFilesAsync(files: ExportAssetMap, outputDir: s
     const size = chalk.gray`(${prettyBytes(length)})`;
     return size;
   };
+
+  if (rscEntries.length) {
+    const plural = rscEntries.length === 1 ? '' : 's';
+
+    Log.log('');
+    Log.log(chalk.bold`Exporting ${rscEntries.length} React Server Component${plural}:`);
+
+    for (const [filePath, assets] of rscEntries.sort((a, b) => a[0].length - b[0].length)) {
+      const id = assets.rscId!;
+      Log.log(
+        '/' + (id === '' ? chalk.gray(' (index)') : id),
+        sizeStr(assets.contents),
+        chalk.gray(filePath)
+      );
+    }
+  }
 
   if (routeEntries.length) {
     const plural = routeEntries.length === 1 ? '' : 's';

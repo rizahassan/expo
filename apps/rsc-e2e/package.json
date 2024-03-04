@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "export:kitchen": "RSC_ROOT=kitchen expo export --output-dir dist-kitchen",
+    "export:kitchen": "RSC_ROOT=kitchen expo export --output-dir dist-kitchen -p web",
     "start:kitchen": "RSC_ROOT=kitchen expo start",
-    "export:router": "RSC_ROOT=app expo export --output-dir dist-router",
+    "export:router": "RSC_ROOT=app expo export --output-dir dist-router -p web",
     "start:router": "RSC_ROOT=app expo start",
     "start": "expo start",
     "android": "expo run:android",

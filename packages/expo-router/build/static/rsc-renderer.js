@@ -101,13 +101,14 @@ async function renderRsc(opts
         let args = [];
         let bodyStr = '';
         if (body) {
-            if (body instanceof ReadableStream) {
+            if (body instanceof ReadableStream || 'getReader' in body) {
                 bodyStr = await (0, stream_1.readableStreamToString)(body);
             }
             else if (typeof body === 'string') {
                 bodyStr = body;
             }
             else {
+                console.error(body);
                 throw new Error('Unexpected body type: ' + body);
             }
         }

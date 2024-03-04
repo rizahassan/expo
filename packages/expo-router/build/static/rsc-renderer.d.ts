@@ -9,8 +9,6 @@ export interface RenderContext<T = unknown> {
     rerender: (input: string, searchParams?: URLSearchParams) => void;
     context: T;
 }
-export declare const fileURLToFilePath: (fileURL: string) => string;
-export declare function getRouteNodeForPathname(pathname: string): Promise<import("../getServerManifest").ExpoRouterServerManifestV1Route<string>>;
 type ResolvedConfig = any;
 export declare function renderRsc(opts: {
     config: ResolvedConfig;

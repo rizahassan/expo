@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { PathSpec } from './path';
+import type { PathSpec } from './path';
 
 type Elements = Record<string, ReactNode>;
 

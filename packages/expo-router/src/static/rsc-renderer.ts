@@ -5,19 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { readableStreamToString } from '@remix-run/node/dist/stream';
 import chalk from 'chalk';
 import type { ReactNode } from 'react';
 import { renderToReadableStream, decodeReply } from 'react-server-dom-webpack/server.edge';
 
-import { ctx } from '../../_ctx';
 import OS from '../../os';
-import { getRoutes } from '../getRoutes';
-import { getServerManifest } from '../getServerManifest';
-// import { SHOULD_SKIP_ID, ShouldSkip } from '../rsc/router/common';
 import { EntriesDev, EntriesPrd } from '../rsc/server';
-
-// Importing this from the root will cause a second copy of source-map-support to be loaded which will break stack traces.
+import { streamToString } from '../rsc/stream';
 
 const debug = require('debug')('expo:rsc');
 
@@ -26,13 +20,6 @@ export interface RenderContext<T = unknown> {
   context: T;
 }
 
-export const fileURLToFilePath = (fileURL: string) => {
-  if (!fileURL.startsWith('file://')) {
-    throw new Error('Not a file URL');
-  }
-  return decodeURI(fileURL.slice('file://'.length));
-};
-
 const resolveClientEntryForPrd = (id: string, config: ResolvedConfig) => {
   if (!id.startsWith('@id/')) {
     throw new Error('Unexpected client entry in PRD: ' + id);
@@ -40,35 +27,35 @@ const resolveClientEntryForPrd = (id: string, config: ResolvedConfig) => {
   return config.basePath + id.slice('@id/'.length);
 };
 
-export async function getRouteNodeForPathname(pathname: string) {
-  // TODO: Populate this with Expo Router results.
+// export async function getRouteNodeForPathname(pathname: string) {
+//   // TODO: Populate this with Expo Router results.
 
-  const routes = getRoutes(ctx, {
-    importMode: 'lazy',
-  });
-  console.log('serverManifest.htmlRoutes', routes);
-  const serverManifest = await getServerManifest(routes);
+//   const routes = getRoutes(ctx, {
+//     importMode: 'lazy',
+//   });
+//   console.log('serverManifest.htmlRoutes', routes);
+//   const serverManifest = await getServerManifest(routes);
 
-  console.log('serverManifest.htmlRoutes', serverManifest.htmlRoutes);
-  const matchedNode = serverManifest.htmlRoutes.find((file) =>
-    new RegExp(file.namedRegex).test(pathname)
-  );
-  if (!matchedNode) {
-    throw new Error(
-      'No matching route found for: ' + pathname + '. Expected: ' + ctx.keys().join(', ')
-    );
-  }
+//   console.log('serverManifest.htmlRoutes', serverManifest.htmlRoutes);
+//   const matchedNode = serverManifest.htmlRoutes.find((file) =>
+//     new RegExp(file.namedRegex).test(pathname)
+//   );
+//   if (!matchedNode) {
+//     throw new Error(
+//       'No matching route found for: ' + pathname + '. Expected: ' + ctx.keys().join(', ')
+//     );
+//   }
 
-  const contextKey = matchedNode.file;
+//   const contextKey = matchedNode.file;
 
-  if (!ctx.keys().includes(contextKey)) {
-    throw new Error(
-      'Failed to find route: ' + contextKey + '. Expected one of: ' + ctx.keys().join(', ')
-    );
-  }
+//   if (!ctx.keys().includes(contextKey)) {
+//     throw new Error(
+//       'Failed to find route: ' + contextKey + '. Expected one of: ' + ctx.keys().join(', ')
+//     );
+//   }
 
-  return matchedNode;
-}
+//   return matchedNode;
+// }
 
 type ResolvedConfig = any;
 
@@ -178,14 +165,7 @@ export async function renderRsc(
     let args: unknown[] = [];
     let bodyStr = '';
     if (body) {
-      if (body instanceof ReadableStream || 'getReader' in body) {
-        bodyStr = await readableStreamToString(body);
-      } else if (typeof body === 'string') {
-        bodyStr = body;
-      } else {
-        console.error(body);
-        throw new Error('Unexpected body type: ' + body);
-      }
+      bodyStr = await streamToString(body);
     }
     if (typeof contentType === 'string' && contentType.startsWith('multipart/form-data')) {
       // XXX This doesn't support streaming unlike busboy
@@ -404,11 +384,11 @@ export async function getSsrConfig(args: GetSsrConfigArgs, opts: GetSsrConfigOpt
 
   const {
     default: { getSsrConfig },
-    loadModule,
+    // loadModule,
   } = entries as (EntriesDev & { loadModule: undefined }) | EntriesPrd;
-  const { renderToReadableStream } = await loadModule!('react-server-dom-webpack/server.edge').then(
-    (m: any) => m.default
-  );
+  // const { renderToReadableStream } = await loadModule!('react-server-dom-webpack/server.edge').then(
+  //   (m: any) => m.default
+  // );
 
   const ssrConfig = await getSsrConfig?.(pathname, { searchParams });
   if (!ssrConfig) {

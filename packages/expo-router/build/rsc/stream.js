@@ -1,7 +1,7 @@
 "use strict";
 // From waku https://github.com/dai-shi/waku/blob/32d52242c1450b5f5965860e671ff73c42da8bd0/packages/waku/src/lib/utils/stream.ts#L1
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.streamToString = exports.concatUint8Arrays = exports.endStream = void 0;
+exports.stringToStream = exports.streamToString = exports.concatUint8Arrays = exports.endStream = void 0;
 const endStream = async (stream, message) => {
     const writer = stream.getWriter();
     await writer.ready;
@@ -40,4 +40,14 @@ const streamToString = async (stream) => {
     return outs.join('');
 };
 exports.streamToString = streamToString;
+const stringToStream = (str) => {
+    const encoder = new TextEncoder();
+    return new ReadableStream({
+        start(controller) {
+            controller.enqueue(encoder.encode(str));
+            controller.close();
+        },
+    });
+};
+exports.stringToStream = stringToStream;
 //# sourceMappingURL=stream.js.map

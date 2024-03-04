@@ -9,48 +9,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSsrConfig = exports.getBuildConfig = exports.renderRsc = exports.getRouteNodeForPathname = exports.fileURLToFilePath = void 0;
-const stream_1 = require("@remix-run/node/dist/stream");
+exports.getSsrConfig = exports.getBuildConfig = exports.renderRsc = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const server_edge_1 = require("react-server-dom-webpack/server.edge");
-const _ctx_1 = require("../../_ctx");
 const os_1 = __importDefault(require("../../os"));
-const getRoutes_1 = require("../getRoutes");
-const getServerManifest_1 = require("../getServerManifest");
-// Importing this from the root will cause a second copy of source-map-support to be loaded which will break stack traces.
+const stream_1 = require("../rsc/stream");
 const debug = require('debug')('expo:rsc');
-const fileURLToFilePath = (fileURL) => {
-    if (!fileURL.startsWith('file://')) {
-        throw new Error('Not a file URL');
-    }
-    return decodeURI(fileURL.slice('file://'.length));
-};
-exports.fileURLToFilePath = fileURLToFilePath;
 const resolveClientEntryForPrd = (id, config) => {
     if (!id.startsWith('@id/')) {
         throw new Error('Unexpected client entry in PRD: ' + id);
     }
     return config.basePath + id.slice('@id/'.length);
 };
-async function getRouteNodeForPathname(pathname) {
-    // TODO: Populate this with Expo Router results.
-    const routes = (0, getRoutes_1.getRoutes)(_ctx_1.ctx, {
-        importMode: 'lazy',
-    });
-    console.log('serverManifest.htmlRoutes', routes);
-    const serverManifest = await (0, getServerManifest_1.getServerManifest)(routes);
-    console.log('serverManifest.htmlRoutes', serverManifest.htmlRoutes);
-    const matchedNode = serverManifest.htmlRoutes.find((file) => new RegExp(file.namedRegex).test(pathname));
-    if (!matchedNode) {
-        throw new Error('No matching route found for: ' + pathname + '. Expected: ' + _ctx_1.ctx.keys().join(', '));
-    }
-    const contextKey = matchedNode.file;
-    if (!_ctx_1.ctx.keys().includes(contextKey)) {
-        throw new Error('Failed to find route: ' + contextKey + '. Expected one of: ' + _ctx_1.ctx.keys().join(', '));
-    }
-    return matchedNode;
-}
-exports.getRouteNodeForPathname = getRouteNodeForPathname;
 async function renderRsc(opts
 // moduleMap: WebpackManifest
 ) {
@@ -101,16 +71,7 @@ async function renderRsc(opts
         let args = [];
         let bodyStr = '';
         if (body) {
-            if (body instanceof ReadableStream || 'getReader' in body) {
-                bodyStr = await (0, stream_1.readableStreamToString)(body);
-            }
-            else if (typeof body === 'string') {
-                bodyStr = body;
-            }
-            else {
-                console.error(body);
-                throw new Error('Unexpected body type: ' + body);
-            }
+            bodyStr = await (0, stream_1.streamToString)(body);
         }
         if (typeof contentType === 'string' && contentType.startsWith('multipart/form-data')) {
             // XXX This doesn't support streaming unlike busboy
@@ -286,8 +247,12 @@ async function getSsrConfig(args, opts) {
     const { config, pathname, searchParams } = args;
     const { isDev, entries } = opts;
     const resolveClientEntry = isDev ? opts.resolveClientEntry : resolveClientEntryForPrd;
-    const { default: { getSsrConfig }, loadModule, } = entries;
-    const { renderToReadableStream } = await loadModule('react-server-dom-webpack/server.edge').then((m) => m.default);
+    const { default: { getSsrConfig },
+    // loadModule,
+     } = entries;
+    // const { renderToReadableStream } = await loadModule!('react-server-dom-webpack/server.edge').then(
+    //   (m: any) => m.default
+    // );
     const ssrConfig = await getSsrConfig?.(pathname, { searchParams });
     if (!ssrConfig) {
         return null;
@@ -301,7 +266,7 @@ async function getSsrConfig(args, opts) {
     });
     return {
         ...ssrConfig,
-        body: renderToReadableStream(ssrConfig.body, bundlerConfig),
+        body: (0, server_edge_1.renderToReadableStream)(ssrConfig.body, bundlerConfig),
     };
 }
 exports.getSsrConfig = getSsrConfig;

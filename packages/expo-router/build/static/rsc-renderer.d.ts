@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import { EntriesDev, EntriesPrd } from '../rsc/server';
+import type { EntriesDev, EntriesPrd } from '../rsc/server';
 export interface RenderContext<T = unknown> {
     rerender: (input: string, searchParams?: URLSearchParams) => void;
     context: T;

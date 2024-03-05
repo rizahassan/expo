@@ -18,7 +18,7 @@ import {
 import { AssetData } from 'metro';
 import fetch from 'node-fetch';
 import path from 'path';
-
+import { getRscMiddleware } from '@expo/server/build/middleware/rsc';
 import { createRouteHandlerMiddleware } from './createServerRouteMiddleware';
 import { ExpoRouterServerManifestV1, fetchManifest } from './fetchRouterManifest';
 import { instantiateMetroAsync } from './instantiateMetro';
@@ -412,6 +412,15 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     ).fn;
   }
 
+  private async ssrLoadModuleWithHmr<T extends Record<string, any>>(
+    filePath: string,
+    specificOptions: Partial<ExpoMetroOptions> = {}
+  ): Promise<T> {
+    const { filename, fn } = await this.ssrLoadModuleAndHmrEntry<T>(filePath, specificOptions);
+    this.setupHmr(new URL(filename));
+    return fn;
+  }
+
   async ssrLoadModuleAndHmrEntry<T extends Record<string, any>>(
     filePath: string,
     specificOptions: Partial<ExpoMetroOptions> = {}
@@ -591,7 +600,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     return getRscEntries;
   }
 
-  private getResolveClientEntry(context: { platform: string; engine?: 'hermes' }) {
+  private getResolveClientEntry(context: { platform: string; engine?: 'hermes' | null }) {
     // TODO: Memoize this
     const serverRoot = getMetroServerRoot(this.projectRoot);
 
@@ -864,7 +873,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
           );
 
           const pipe = await this.renderRscToReadableStream({
-            route: input,
+            input,
             method: 'GET',
             engine,
             platform,
@@ -1029,7 +1038,7 @@ export class MetroBundlerDevServer extends BundlerDevServer {
                 engine: 'hermes',
                 method: 'GET',
                 platform: 'web',
-                route: input,
+                input,
                 entries: distEntries,
               });
               // return renderRsc(
@@ -1097,41 +1106,31 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
   }
 
   async renderRscToReadableStream({
-    route,
+    input,
     searchParams,
     method,
     platform,
-    req,
+    body,
     engine,
     entries,
   }: {
-    route: string;
+    input: string;
     searchParams: URLSearchParams;
-    // eslint-disable-next-line @typescript-eslint/ban-types
     method: 'POST' | 'GET';
     platform: string;
-    req?: Request;
-    engine?: 'hermes';
+    body?: ReadableStream<Uint8Array>;
+    engine?: 'hermes' | null;
     entries?: EntriesPrd;
   }) {
-    const { baseUrl, mode, routerRoot, isExporting } = this.instanceMetroOptions;
-    assert(
-      baseUrl != null && mode != null && routerRoot != null && isExporting != null,
-      'The server must be started before calling ssrLoadModule.'
-    );
+    const { isExporting } = this.instanceMetroOptions;
+    assert(isExporting != null, 'The server must be started before calling ssrLoadModule.');
+
     if (method === 'POST') {
-      assert(req, 'Server request must be provided when method is POST (server actions)');
+      assert(body, 'Server request must be provided when method is POST (server actions)');
     }
 
     // TODO: Extract CSS Modules / Assets from the bundler process
-    const {
-      filename: serverUrl,
-      fn: {
-        renderRsc,
-        // setupHmr,
-        // renderRouteWithContextKey, getRouteNodeForPathname
-      },
-    } = await this.ssrLoadModuleAndHmrEntry<
+    const { renderRsc } = await this.ssrLoadModuleWithHmr<
       //   typeof import('expo-router/build/static/rsc-renderer')
       // >('expo-router/node/rsc.js', {
       typeof import('expo-router/src/static/rsc-renderer')
@@ -1140,37 +1139,27 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
       platform,
     });
 
-    console.log('>', route, platform, serverUrl);
-
-    // const routeNode = await getRouteNodeForPathname(route);
-
-    // const elements = await renderRouteWithContextKey(routeNode.file, {
-    //   //TODO: Props for RSC.
-    // });
-
-    // const input = './index.tsx';
-    // const normalizedRouteKey = 'TODO';
-    //TODO: This isn't right
-    const normalizedRouteKey = (
-      require('expo-router/build/matchers') as typeof import('expo-router/build/matchers')
-    ).getNameFromFilePath(route);
-
     // TODO: Add config
     const config = {};
+    const context = {};
+
+    const universalProps = {
+      body,
+      searchParams,
+      context,
+      config,
+      method,
+      input,
+      entries: entries ?? (await this.getExpoRouterRscEntriesGetterAsync({ platform })),
+      resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
+    };
 
     if (isExporting) {
       // throw new Error('TODO: Add exporting back');
 
       const pipe = await renderRsc({
-        body: req?.body!,
-        entries: entries ?? (await this.getExpoRouterRscEntriesGetterAsync({ platform })),
-        searchParams,
-        context: {},
-        isExporting: !!isExporting,
-        resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
-        config,
-        method,
-        input: route,
+        ...universalProps,
+        isExporting: true,
         moduleIdCallback: (moduleInfo: {
           id: string;
           chunks: string[];
@@ -1183,6 +1172,11 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
             platformSet = new Map();
             this.clientModuleMap.set(platform, platformSet);
           }
+          //TODO: This isn't right
+          const normalizedRouteKey = (
+            require('expo-router/build/matchers') as typeof import('expo-router/build/matchers')
+          ).getNameFromFilePath(input);
+
           // Collect the client boundaries while rendering the server components.
           // Indexed by routes.
           let idSet = platformSet.get(normalizedRouteKey);
@@ -1196,19 +1190,9 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
 
       return pipe;
     } else {
-      this.setupHmr(new URL(serverUrl));
-
       const pipe = await renderRsc({
-        body: req?.body!,
-        entries: entries ?? (await this.getExpoRouterRscEntriesGetterAsync({ platform })),
-        searchParams,
-        context: {},
-        isExporting: !!isExporting,
-        resolveClientEntry: this.getResolveClientEntry({ platform, engine }),
-        config,
-        method,
-        input: route,
-
+        ...universalProps,
+        isExporting: false,
         customImport: async (relativeDevServerUrl: string): Promise<any> => {
           const url = new URL(relativeDevServerUrl, this.getDevServerUrlOrAssert());
 
@@ -1226,35 +1210,6 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
           // console.log('Server action:');
           // console.log(contents);
           return evalMetro(this.projectRoot, contents.src, contents.filename);
-        },
-        // serverUrl: new URL(serverUrl),
-        // onReload: (...args: any[]) => {
-        //   // Send reload command to client from Fast Refresh code.
-        //   debug('[CLI]: Reload RSC:', args);
-
-        //   // TODO: Target only certain platforms
-        //   this.broadcastMessage('reload');
-        // },
-        moduleIdCallback: (moduleInfo: {
-          id: string;
-          chunks: string[];
-          name: string;
-          async: boolean;
-        }) => {
-          // console.log('moduleIdCallback:', moduleInfo.id, moduleInfo.name, moduleInfo.async);
-          // let platformSet = this.clientModuleMap.get(platform);
-          // if (!platformSet) {
-          //   platformSet = new Map();
-          //   this.clientModuleMap.set(platform, platformSet);
-          // }
-          // // Collect the client boundaries while rendering the server components.
-          // // Indexed by routes.
-          // let idSet = platformSet.get(normalizedRouteKey);
-          // if (!idSet) {
-          //   idSet = new Set();
-          //   platformSet.set(normalizedRouteKey, idSet);
-          // }
-          // idSet.add(moduleInfo.id);
         },
       });
 
@@ -1371,61 +1326,34 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
         }
       };
 
-      middleware.use(
-        createRequestHandler(this.projectRoot, async (req) => {
-          const url = getFullUrl(req.url);
-          if (!url.pathname.startsWith(rscPathPrefix)) {
-            winterNext();
-          }
-          const method = req.method;
-          if (!isSupportedRequestMethod(method)) {
-            notAllowed();
-          }
+      // TODO: Figure out prod RSC endpoint code.
+      // getRscMiddleware({
+      //   config: {},
+      //   baseUrl,
+      //   rscPath,
+      //   renderRsc: async (args) => {
+      //     return await this.renderRscToReadableStream({
+      //       input: args.input,
+      //       searchParams: args.searchParams,
+      //       platform: args.platform,
+      //       body: args.body!,
+      //       method: args.method,
+      //       engine: args.engine,
+      //     });
+      //   },
+      // })
 
-          const engine = url.searchParams.get('transform.engine');
-          if (engine && !['hermes'].includes(engine)) {
-            return new Response(
-              `Query parameter "transform.engine" is an unsupported value: ${engine}`,
-              {
-                status: 500,
-                headers: {
-                  'Content-Type': 'text/plain',
-                },
-              }
-            );
-          }
-          const platform = url.searchParams.get('platform') ?? req.headers.get('expo-platform');
-          if (typeof platform !== 'string' || !platform) {
-            return new Response('Missing expo-platform header or platform query parameter', {
-              status: 500,
-              headers: {
-                'Content-Type': 'text/plain',
-              },
-            });
-          }
-
-          let route: string;
-          const encodedInput = url.pathname.replace(rscPathPrefix, '');
+      const rscMiddleware = getRscMiddleware({
+        config: {},
+        // Disabled in development
+        baseUrl: '',
+        rscPath,
+        renderRsc: async (args) => {
+          // Dev server-only implementation.
           try {
-            route = decodeInput(encodedInput);
-          } catch {
-            return new Response(`Invalid encoded input: "${encodedInput}"`, {
-              status: 400,
-              headers: {
-                'Content-Type': 'text/plain',
-              },
-            });
-          }
-
-          let pipe: ReadableStream<any>;
-          try {
-            pipe = await this.renderRscToReadableStream({
-              route,
-              searchParams: url.searchParams,
-              platform,
-              req,
-              method,
-              engine: engine as 'hermes' | undefined,
+            return await this.renderRscToReadableStream({
+              ...args,
+              body: args.body!,
             });
           } catch (error: any) {
             // If you get a codeFrame error during SSR like when using a Class component in React Server Components, then this
@@ -1447,36 +1375,25 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
             // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
             const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
 
-            return new Response(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
+            throw new Response(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
               status: 500,
               headers: {
                 'Content-Type': 'text/plain',
               },
             });
           }
+        },
+      });
 
-          console.log('pipe:', pipe);
-          const response = new Response(pipe, {
-            headers: {
-              // Set headers for RSC
-              // 'Content-Type': 'application/json; charset=UTF-8',
-              // https://dev.to/one-beyond/react-server-components-without-any-frameworks-5a8p#:~:text=The%20RSC%20format%20is%20a,elements%20the%20client%20will%20render.
-              // 'Content-Type': 'text/x-component',
-              // The response is a streamed text file
-              'Content-Type': 'text/plain',
-            },
-          });
-          // TODO: Should we set X-Location? https://github.com/reactjs/server-components-demo/blob/95fcac10102d20722af60506af3b785b557c5fd7/server/api.server.js#L108C40-L108C48
-
-          console.log('>>', response.headers.entries());
-          // TODO: Prevent this from being appended (in RNC CLI)
-          // response.headers.delete('Surrogate-Control');
-          // response.headers.delete('Cache-Control');
-          // response.headers.delete('Expires');
-          // response.headers.delete('X-Content-Type-Options');
-
-          return response;
-        })
+      middleware.use(
+        createBuiltinAPIRequestHandler(
+          this.projectRoot,
+          // Match `/RSC/[...path]`
+          (req) => {
+            return getFullUrl(req.url).pathname.startsWith(rscPathPrefix);
+          },
+          rscMiddleware
+        )
       );
 
       if (useServerRendering) {
@@ -1510,7 +1427,7 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
                 renderRscWithWorker: async (props) => {
                   // TODO: This is terrible, it should use all the `props`.
                   const stream = await this.renderRscToReadableStream({
-                    route: props.input,
+                    input: props.input,
                     method: props.method,
                     platform: 'web',
                     url: new URL(req.url!, this.getDevServerUrlOrAssert()),
@@ -1780,6 +1697,23 @@ export function getDeepLinkHandler(projectRoot: string): DeepLinkHandler {
       ...getDevClientProperties(projectRoot, exp),
     });
   };
+}
+
+export function createBuiltinAPIRequestHandler(
+  projectRoot: string,
+  matchRequest: (request: Request) => boolean,
+  handlers: Record<string, (req: Request) => Promise<Response>>
+): RequestHandler {
+  return createRequestHandler(projectRoot, (req) => {
+    if (!matchRequest(req)) {
+      winterNext();
+    }
+    const handler = handlers[req.method];
+    if (!handler) {
+      notAllowed();
+    }
+    return handler(req);
+  });
 }
 
 /**

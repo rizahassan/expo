@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSsrConfig = exports.getBuildConfig = exports.renderRsc = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const server_edge_1 = require("react-server-dom-webpack/server.edge");
-const os_1 = __importDefault(require("../../os"));
 const stream_1 = require("../rsc/stream");
 const debug = require('debug')('expo:rsc');
 const resolveClientEntryForPrd = (id, config) => {
@@ -140,7 +139,7 @@ function withDebugLogging(stream) {
         start(controller) {
             stream.pipeTo(new WritableStream({
                 write(chunk) {
-                    console.log((0, chalk_1.default) `{dim ${os_1.default} [rsc]}`, textDecoder.decode(chunk));
+                    console.log((0, chalk_1.default) `{dim [rsc]}`, textDecoder.decode(chunk));
                     controller.enqueue(chunk);
                 },
                 close() {

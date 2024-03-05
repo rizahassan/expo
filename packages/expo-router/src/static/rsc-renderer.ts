@@ -9,8 +9,7 @@ import chalk from 'chalk';
 import type { ReactNode } from 'react';
 import { renderToReadableStream, decodeReply } from 'react-server-dom-webpack/server.edge';
 
-import OS from '../../os';
-import { EntriesDev, EntriesPrd } from '../rsc/server';
+import type { EntriesDev, EntriesPrd } from '../rsc/server';
 import { streamToString } from '../rsc/stream';
 
 const debug = require('debug')('expo:rsc');
@@ -242,7 +241,7 @@ function withDebugLogging(stream: ReadableStream) {
       stream.pipeTo(
         new WritableStream({
           write(chunk) {
-            console.log(chalk`{dim ${OS} [rsc]}`, textDecoder.decode(chunk));
+            console.log(chalk`{dim [rsc]}`, textDecoder.decode(chunk));
             controller.enqueue(chunk);
           },
           close() {

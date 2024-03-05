@@ -33,14 +33,10 @@ export function createDeviceMiddlewareFactory(
     ].filter((middleware) => middleware.isEnabled());
 
     return {
-      handleDeviceMessage(message: any) {
-        return middlewares.some((middleware) => middleware.handleDeviceMessage?.(message) ?? false);
-      },
-      handleDebuggerMessage(message: any) {
-        return middlewares.some(
-          (middleware) => middleware.handleDebuggerMessage?.(message) ?? false
-        );
-      },
+      handleDeviceMessage: (message: any) =>
+        middlewares.some((middleware) => middleware.handleDeviceMessage?.(message) ?? false),
+      handleDebuggerMessage: (message: any) =>
+        middlewares.some((middleware) => middleware.handleDebuggerMessage?.(message) ?? false),
     };
   };
 }

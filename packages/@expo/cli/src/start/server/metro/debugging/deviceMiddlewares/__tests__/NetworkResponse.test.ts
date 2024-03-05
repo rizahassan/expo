@@ -1,22 +1,21 @@
+import { mockConnection } from './testUtilts';
 import { NetworkResponseMiddleware } from '../NetworkResponse';
-import { type DeviceMetadata } from '../types';
 
 it('is disabled when device capability includes `nativeNetworkInspection`', () => {
-  const device = { page: { capabilities: { nativeNetworkInspection: true } } } as DeviceMetadata;
-  const handler = new NetworkResponseMiddleware(device);
+  const connection = mockConnection({ page: { capabilities: { nativeNetworkInspection: true } } });
+  const handler = new NetworkResponseMiddleware(connection);
   expect(handler.isEnabled()).toBe(false);
 });
 
 it('is enabled when device capability is missing `nativeNetworkInspection`', () => {
-  const device = { page: { capabilities: {} } } as DeviceMetadata;
-  const handler = new NetworkResponseMiddleware(device);
+  const connection = mockConnection();
+  const handler = new NetworkResponseMiddleware(connection);
   expect(handler.isEnabled()).toBe(true);
 });
 
 it('responds to response body from device and debugger', () => {
-  const device = { page: { capabilities: {} } } as DeviceMetadata;
-  const handler = new NetworkResponseMiddleware(device);
-  const socket = { send: jest.fn() };
+  const connection = mockConnection();
+  const handler = new NetworkResponseMiddleware(connection);
 
   // Expect the device message to be handled
   expect(
@@ -32,18 +31,15 @@ it('responds to response body from device and debugger', () => {
 
   // Expect the debugger message to be handled
   expect(
-    handler.handleDebuggerMessage(
-      {
-        id: 420,
-        method: 'Network.getResponseBody',
-        params: { requestId: '1337' },
-      },
-      { socket }
-    )
+    handler.handleDebuggerMessage({
+      id: 420,
+      method: 'Network.getResponseBody',
+      params: { requestId: '1337' },
+    })
   ).toBe(true);
 
   // Expect the proper response was sent
-  expect(socket.send).toBeCalledWith(
+  expect(connection.debuggerInfo.socket.send).toBeCalledWith(
     JSON.stringify({
       id: 420,
       result: {
@@ -55,21 +51,17 @@ it('responds to response body from device and debugger', () => {
 });
 
 it('does not respond to non-existing response', () => {
-  const device = {} as DeviceMetadata;
-  const handler = new NetworkResponseMiddleware(device);
-  const socket = { send: jest.fn() };
+  const connection = mockConnection();
+  const handler = new NetworkResponseMiddleware(connection);
 
   // Expect the debugger message to not be handled
   expect(
-    handler.handleDebuggerMessage(
-      {
-        id: 420,
-        method: 'Network.getResponseBody',
-        params: { requestId: '1337' },
-      },
-      { socket }
-    )
+    handler.handleDebuggerMessage({
+      id: 420,
+      method: 'Network.getResponseBody',
+      params: { requestId: '1337' },
+    })
   ).toBe(false);
 
-  expect(socket.send).not.toBeCalled();
+  expect(connection.debuggerInfo.socket.send).not.toBeCalled();
 });

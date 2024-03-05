@@ -1,8 +1,9 @@
+import { mockConnection } from './testUtilts';
 import {
   type DebuggerGetPossibleBreakpoints,
   VscodeDebuggerGetPossibleBreakpointsMiddleware,
 } from '../VscodeDebuggerGetPossibleBreakpoints';
-import { type DebuggerRequest, type DeviceMetadata } from '../types';
+import { type DebuggerRequest } from '../types';
 import { getDebuggerType } from '../utils';
 
 jest.mock('../utils', () => ({
@@ -10,27 +11,21 @@ jest.mock('../utils', () => ({
   getDebuggerType: jest.fn(() => 'unknown'),
 }));
 
-it('does not respond on non-vscode debugger type', () => {
-  const device = {} as DeviceMetadata;
-  const handler = new VscodeDebuggerGetPossibleBreakpointsMiddleware(device);
-  const message: DebuggerRequest<DebuggerGetPossibleBreakpoints> = {
-    id: 420,
-    method: 'Debugger.getPossibleBreakpoints',
-    params: {
-      start: { lineNumber: 13, columnNumber: 37, scriptId: '1337' },
-    },
-  };
+it('is enabled when debugger has vscode user agent', () => {
+  jest.mocked(getDebuggerType).mockReturnValue('vscode');
+  const handler = new VscodeDebuggerGetPossibleBreakpointsMiddleware(mockConnection());
+  expect(handler.isEnabled()).toBe(true);
+});
 
-  // Should not stop propagation for non-vscode debugger type
-  expect(handler.handleDebuggerMessage(message, {})).toBe(false);
+it('is disabled when debugger doesnt have vscode user agent', () => {
+  jest.mocked(getDebuggerType).mockReturnValue('unknown');
+  const handler = new VscodeDebuggerGetPossibleBreakpointsMiddleware(mockConnection());
+  expect(handler.isEnabled()).toBe(false);
 });
 
 it('responds to `Debugger.getPossibleBreakpoints` with empty `locations`', () => {
-  jest.mocked(getDebuggerType).mockReturnValue('vscode');
-
-  const device = {} as DeviceMetadata;
-  const handler = new VscodeDebuggerGetPossibleBreakpointsMiddleware(device);
-  const socket = { send: jest.fn() };
+  const connection = mockConnection();
+  const handler = new VscodeDebuggerGetPossibleBreakpointsMiddleware(connection);
 
   const message: DebuggerRequest<DebuggerGetPossibleBreakpoints> = {
     id: 420,
@@ -41,9 +36,9 @@ it('responds to `Debugger.getPossibleBreakpoints` with empty `locations`', () =>
   };
 
   // Should stop propagation when handled
-  expect(handler.handleDebuggerMessage(message, { socket })).toBe(true);
+  expect(handler.handleDebuggerMessage(message)).toBe(true);
   // Should send a response with empty locations
-  expect(socket.send).toBeCalledWith(
+  expect(connection.debuggerInfo.socket.send).toBeCalledWith(
     JSON.stringify({
       id: 420,
       result: { locations: [] },

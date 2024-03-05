@@ -1,5 +1,4 @@
 /* eslint-disable no-var */
-import { installGlobals as installRemixGlobals } from '@remix-run/node';
 
 declare const Response: {
   prototype: Response;
@@ -25,8 +24,6 @@ export const ExpoRequest = Request;
 export const ExpoResponse = Request;
 
 export function installGlobals() {
-  // installRemixGlobals();
-
   global.ExpoRequest = Request;
   global.ExpoResponse = Response;
 

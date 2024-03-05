@@ -1,4 +1,20 @@
-import '@expo/server/build/environment';
+declare global {
+  /** @deprecated */
+  var ExpoRequest: typeof Request;
+  /** @deprecated */
+  var ExpoResponse: typeof Response;
+}
+
+/** @deprecated */
+export declare const ExpoRequest: {
+  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
+  prototype: Request;
+};
+/** @deprecated */
+export declare const ExpoResponse: {
+  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
+  prototype: Request;
+};
 
 declare const Response: {
   prototype: Response;

@@ -138,6 +138,7 @@ export const fetchRSC = (
         getAdjustedFilePath(BASE_PATH + encodeInput(encodeURIComponent(actionId))),
         {
           method: 'POST',
+          duplex: 'half',
           reactNative: { textStreaming: true },
           body: await encodeReply(args),
           headers: {

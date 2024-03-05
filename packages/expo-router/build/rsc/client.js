@@ -114,6 +114,7 @@ const fetchRSC = (input, searchParamsString, setElements, cache = fetchCache) =>
         async callServer(actionId, args) {
             const response = fetch(getAdjustedFilePath(BASE_PATH + (0, utils_1.encodeInput)(encodeURIComponent(actionId))), {
                 method: 'POST',
+                duplex: 'half',
                 reactNative: { textStreaming: true },
                 body: await encodeReply(args),
                 headers: {

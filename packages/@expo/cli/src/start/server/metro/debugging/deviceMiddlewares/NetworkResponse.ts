@@ -3,20 +3,18 @@ import type { Protocol } from 'devtools-protocol';
 import {
   CdpMessage,
   DeviceMiddleware,
-  DebuggerMetadata,
   DeviceRequest,
   DebuggerRequest,
   DebuggerResponse,
   DeviceResponse,
 } from './types';
-import { respond } from './utils';
 
 export class NetworkResponseMiddleware extends DeviceMiddleware {
   /** All known responses, mapped by request id */
   storage = new Map<string, DebuggerResponse<NetworkGetResponseBody>['result']>();
 
   isEnabled() {
-    return !this.hasCapability('nativeNetworkInspection');
+    return this.page.capabilities.nativeNetworkInspection !== true;
   }
 
   handleDeviceMessage(message: DeviceRequest<NetworkReceivedResponseBody>) {
@@ -29,15 +27,12 @@ export class NetworkResponseMiddleware extends DeviceMiddleware {
     return false;
   }
 
-  handleDebuggerMessage(
-    message: DebuggerRequest<NetworkGetResponseBody>,
-    { socket }: DebuggerMetadata
-  ) {
+  handleDebuggerMessage(message: DebuggerRequest<NetworkGetResponseBody>) {
     if (
       message.method === 'Network.getResponseBody' &&
       this.storage.has(message.params.requestId)
     ) {
-      return respond<DeviceResponse<NetworkGetResponseBody>>(socket, {
+      return this.sendToDebugger<DeviceResponse<NetworkGetResponseBody>>({
         id: message.id,
         result: this.storage.get(message.params.requestId)!,
       });

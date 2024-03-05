@@ -1,12 +1,6 @@
 import Protocol from 'devtools-protocol';
 
-import {
-  CdpMessage,
-  DebuggerMetadata,
-  DebuggerRequest,
-  DeviceResponse,
-  DeviceMiddleware,
-} from './types';
+import { CdpMessage, DebuggerRequest, DeviceResponse, DeviceMiddleware } from './types';
 import { getDebuggerType } from './utils';
 
 /**
@@ -21,11 +15,12 @@ export class VscodeRuntimeGetPropertiesMiddleware extends DeviceMiddleware {
   /** Keep track of `Runtime.getProperties` responses to intercept, by request id */
   interceptGetProperties = new Set<number>();
 
-  handleDebuggerMessage(
-    message: DebuggerRequest<RuntimeGetProperties>,
-    { userAgent }: DebuggerMetadata
-  ) {
-    if (getDebuggerType(userAgent) === 'vscode' && message.method === 'Runtime.getProperties') {
+  isEnabled() {
+    return getDebuggerType(this.debuggerInfo.userAgent) === 'vscode';
+  }
+
+  handleDebuggerMessage(message: DebuggerRequest<RuntimeGetProperties>) {
+    if (message.method === 'Runtime.getProperties') {
       this.interceptGetProperties.add(message.id);
     }
 
@@ -33,15 +28,8 @@ export class VscodeRuntimeGetPropertiesMiddleware extends DeviceMiddleware {
     return false;
   }
 
-  handleDeviceMessage(
-    message: DeviceResponse<RuntimeGetProperties>,
-    { userAgent }: DebuggerMetadata
-  ) {
-    if (
-      getDebuggerType(userAgent) === 'vscode' &&
-      'id' in message &&
-      this.interceptGetProperties.has(message.id)
-    ) {
+  handleDeviceMessage(message: DeviceResponse<RuntimeGetProperties>) {
+    if ('id' in message && this.interceptGetProperties.has(message.id)) {
       this.interceptGetProperties.delete(message.id);
 
       for (const item of message.result.result ?? []) {

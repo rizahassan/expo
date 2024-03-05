@@ -32,7 +32,7 @@ type TargetCapabilityFlags = {
 };
 
 // TODO: use `@react-native/dev-middleware` type instead
-type Page = {
+export type DevicePage = {
   id: string;
   title: string;
   vm: string;
@@ -42,39 +42,59 @@ type Page = {
 
 // TODO: use `@react-native/dev-middleware` type instead
 export type DeviceMetadata = {
-  deviceId: string;
-  deviceName: string;
-  deviceSocket: WS;
   appId: string;
-  page: Page;
-  projectRoot: string;
+  id: string;
+  name: string;
+  socket: WS;
+};
+
+// TODO: use `@react-native/dev-middleware` type
+export type Connection = {
+  page: DevicePage;
+  deviceInfo: DeviceMetadata;
+  debuggerInfo: DebuggerMetadata;
 };
 
 // TODO: use `@react-native/dev-middleware` type instead
 export abstract class DeviceMiddleware {
-  constructor(protected readonly deviceInfo: DeviceMetadata) {}
+  protected page: DevicePage;
+  protected deviceInfo: DeviceMetadata;
+  protected debuggerInfo: DebuggerMetadata;
+
+  constructor(connection: Connection) {
+    this.page = connection.page;
+    this.deviceInfo = connection.deviceInfo;
+    this.debuggerInfo = connection.debuggerInfo;
+  }
 
   /** Determine if this middleware should be enabled or disabled, based on the page capabilities */
   isEnabled(): boolean {
     return true;
   }
 
-  /** Check if the device supports one of the native capabilities */
-  hasCapability(flag: keyof TargetCapabilityFlags): boolean {
-    return this.deviceInfo.page.capabilities[flag] === true;
+  /** Send a message directly to the device */
+  sendToDevice<T = DeviceResponse | DebuggerResponse>(message: T): true {
+    this.deviceInfo.socket.send(JSON.stringify(message));
+    return true;
+  }
+
+  /** Send a message directly to the debugger */
+  sendToDebugger<T = DeviceResponse | DebuggerResponse>(message: T): true {
+    this.debuggerInfo.socket.send(JSON.stringify(message));
+    return true;
   }
 
   /**
    * Intercept a message coming from the device, modify or respond to it through `this._sendMessageToDevice`.
    * Return `true` if the message was handled, this will stop the message propagation.
    */
-  handleDeviceMessage?(message: DeviceRequest | DeviceResponse, info: DebuggerMetadata): boolean;
+  handleDeviceMessage?(message: DeviceRequest | DeviceResponse): boolean;
 
   /**
    * Intercept a message coming from the debugger, modify or respond to it through `socket.send`.
    * Return `true` if the message was handled, this will stop the message propagation.
    */
-  handleDebuggerMessage?(message: DebuggerRequest, info: DebuggerMetadata): boolean;
+  handleDebuggerMessage?(message: DebuggerRequest | DebuggerResponse): boolean;
 }
 
 /**

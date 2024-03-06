@@ -8,7 +8,7 @@ exports.ErrorBoundary = void 0;
 const bottom_tabs_1 = require("@react-navigation/bottom-tabs");
 const react_1 = __importDefault(require("react"));
 const react_native_1 = require("react-native");
-const react_native_safe_area_context_1 = require("react-native-safe-area-context");
+// import { SafeAreaView } from 'react-native-safe-area-context';
 const Pressable_1 = require("./Pressable");
 const Link_1 = require("../link/Link");
 let useMetroSymbolication;
@@ -95,7 +95,7 @@ const useWrapper = react_native_1.Platform.OS === 'web'
     ? () => react_native_1.View
     : function useWrapper() {
         const inTabBar = react_1.default.useContext(bottom_tabs_1.BottomTabBarHeightContext);
-        const Wrapper = inTabBar ? react_native_1.View : react_native_safe_area_context_1.SafeAreaView;
+        const Wrapper = inTabBar ? react_native_1.View : react_native_1.SafeAreaView;
         return Wrapper;
     };
 function ErrorBoundary({ error, retry }) {

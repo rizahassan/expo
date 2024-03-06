@@ -26,9 +26,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DefaultNavigator = exports.QualifiedSlot = exports.Slot = exports.useSlot = exports.useNavigatorContext = exports.Navigator = exports.NavigatorContext = void 0;
+const react_native_1 = require("react-native");
 const native_1 = require("@react-navigation/native");
 const React = __importStar(require("react"));
-const react_native_safe_area_context_1 = require("react-native-safe-area-context");
+// import { SafeAreaView } from 'react-native-safe-area-context';
+const SafeAreaView = react_native_1.View;
 const Screen_1 = require("./Screen");
 const Route_1 = require("../Route");
 const withLayoutContext_1 = require("../layouts/withLayoutContext");
@@ -113,11 +115,11 @@ function QualifiedSlot() {
 }
 exports.QualifiedSlot = QualifiedSlot;
 function DefaultNavigator() {
-    return (<react_native_safe_area_context_1.SafeAreaView style={{ flex: 1 }}>
+    return (<SafeAreaView style={{ flex: 1 }}>
       <Navigator>
         <QualifiedSlot />
       </Navigator>
-    </react_native_safe_area_context_1.SafeAreaView>);
+    </SafeAreaView>);
 }
 exports.DefaultNavigator = DefaultNavigator;
 Navigator.Slot = Slot;

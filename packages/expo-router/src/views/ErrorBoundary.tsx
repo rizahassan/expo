@@ -2,8 +2,8 @@
 import type { LogBoxLog } from '@expo/metro-runtime/symbolicate';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { StyleSheet, Text, View, TextStyle, Platform, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, SafeAreaView, Text, View, TextStyle, Platform, ScrollView } from 'react-native';
+// import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable } from './Pressable';
 import { ErrorBoundaryProps } from './Try';

@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tutorial = void 0;
 const react_1 = __importDefault(require("react"));
 const react_native_1 = require("react-native");
-const react_native_safe_area_context_1 = require("react-native-safe-area-context");
+const SafeAreaView = react_native_1.View;
+// import { SafeAreaView } from 'react-native-safe-area-context';
 const createEntryFile_1 = require("./createEntryFile");
 const exports_1 = require("../exports");
 const Pressable_1 = require("../views/Pressable");
@@ -46,7 +47,7 @@ function Tutorial() {
     return (<react_native_1.View style={styles.background}>
       <react_native_1.StatusBar barStyle="light-content"/>
 
-      <react_native_safe_area_context_1.SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea}>
         <react_native_1.View style={styles.container}>
           <Header />
           <react_native_1.Text role="heading" aria-level={2} style={styles.subtitle}>
@@ -55,7 +56,7 @@ function Tutorial() {
           </react_native_1.Text>
           {canAutoTouchFile && <Button />}
         </react_native_1.View>
-      </react_native_safe_area_context_1.SafeAreaView>
+      </SafeAreaView>
     </react_native_1.View>);
 }
 exports.Tutorial = Tutorial;

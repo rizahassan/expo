@@ -7,7 +7,7 @@ exports.Toast = exports.ToastWrapper = exports.CODE_FONT = void 0;
 const bottom_tabs_1 = require("@react-navigation/bottom-tabs");
 const react_1 = __importDefault(require("react"));
 const react_native_1 = require("react-native");
-const react_native_safe_area_context_1 = require("react-native-safe-area-context");
+// import { SafeAreaView } from 'react-native-safe-area-context';
 exports.CODE_FONT = react_native_1.Platform.select({
     default: 'Courier',
     ios: 'Courier New',
@@ -27,7 +27,8 @@ function useFadeIn() {
 }
 function ToastWrapper({ children }) {
     const inTabBar = react_1.default.useContext(bottom_tabs_1.BottomTabBarHeightContext);
-    const Wrapper = inTabBar ? react_native_1.View : react_native_safe_area_context_1.SafeAreaView;
+    const Wrapper = react_native_1.View;
+    // const Wrapper = inTabBar ? View : SafeAreaView;
     return (<Wrapper collapsable={false} style={{ flex: 1 }}>
       {children}
     </Wrapper>);

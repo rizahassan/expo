@@ -1,7 +1,7 @@
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import React, { type PropsWithChildren } from 'react';
 import { ActivityIndicator, Animated, Image, Platform, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const CODE_FONT = Platform.select({
   default: 'Courier',
@@ -24,7 +24,8 @@ function useFadeIn() {
 
 export function ToastWrapper({ children }: React.PropsWithChildren) {
   const inTabBar = React.useContext(BottomTabBarHeightContext);
-  const Wrapper = inTabBar ? View : SafeAreaView;
+  const Wrapper = View;
+  // const Wrapper = inTabBar ? View : SafeAreaView;
 
   return (
     <Wrapper collapsable={false} style={{ flex: 1 }}>

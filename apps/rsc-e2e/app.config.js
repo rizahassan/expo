@@ -15,6 +15,7 @@ module.exports = {
   android: {
     package: 'dev.expo.routere2e',
   },
+  runtimeVersion: 'nativeVersion',
   // For testing the output bundle
   jsEngine: 'hermes', // process.env.E2E_ROUTER_SRC ? 'jsc' : 'hermes',
   splash: {

@@ -9,7 +9,7 @@ import chalk from 'chalk';
 import type { ReactNode } from 'react';
 import { renderToReadableStream, decodeReply } from 'react-server-dom-webpack/server.edge';
 
-import type { EntriesDev, EntriesPrd } from '../rsc/server';
+import { setRenderContext, type EntriesDev, type EntriesPrd } from '../rsc/server';
 import { streamToString } from '../rsc/stream';
 
 const debug = require('debug')('expo:rsc');
@@ -26,38 +26,10 @@ const resolveClientEntryForPrd = (id: string, config: ResolvedConfig) => {
   return config.basePath + id.slice('@id/'.length);
 };
 
-// export async function getRouteNodeForPathname(pathname: string) {
-//   // TODO: Populate this with Expo Router results.
-
-//   const routes = getRoutes(ctx, {
-//     importMode: 'lazy',
-//   });
-//   console.log('serverManifest.htmlRoutes', routes);
-//   const serverManifest = await getServerManifest(routes);
-
-//   console.log('serverManifest.htmlRoutes', serverManifest.htmlRoutes);
-//   const matchedNode = serverManifest.htmlRoutes.find((file) =>
-//     new RegExp(file.namedRegex).test(pathname)
-//   );
-//   if (!matchedNode) {
-//     throw new Error(
-//       'No matching route found for: ' + pathname + '. Expected: ' + ctx.keys().join(', ')
-//     );
-//   }
-
-//   const contextKey = matchedNode.file;
-
-//   if (!ctx.keys().includes(contextKey)) {
-//     throw new Error(
-//       'Failed to find route: ' + contextKey + '. Expected one of: ' + ctx.keys().join(', ')
-//     );
-//   }
-
-//   return matchedNode;
-// }
-
 type ResolvedConfig = any;
 
+import { createElement } from 'react';
+import { createFromReadableStream } from 'react-server-dom-webpack/client.edge';
 export async function renderRsc(
   opts: {
     // TODO:
@@ -67,7 +39,7 @@ export async function renderRsc(
     input: string;
     searchParams: URLSearchParams;
     method: 'GET' | 'POST';
-    context: unknown;
+    context: Record<string, unknown> | undefined;
     body?: ReadableStream | undefined;
     contentType?: string | undefined;
     moduleIdCallback?: (module: {
@@ -118,12 +90,64 @@ export async function renderRsc(
 
   const resolveClientEntry = opts.resolveClientEntry;
 
-  const render = async (
-    renderContext: RenderContext,
+  const runWithRenderContext = async <T>(
+    renderContext: Parameters<typeof setRenderContext>[0],
+    fn: () => T
+  ): Promise<Awaited<T>> =>
+    new Promise<Awaited<T>>((resolve, reject) => {
+      createFromReadableStream(
+        renderToReadableStream(
+          createElement((async () => {
+            console.log('[RSC]: setRenderContext', renderContext, 'for input:', input);
+            setRenderContext(renderContext);
+            resolve(await fn());
+          }) as any),
+          {}
+        ),
+        {
+          ssrManifest: { moduleMap: null, moduleLoading: null },
+        }
+      ).catch(reject);
+    });
+
+  const wrapWithContext = (
+    context: Record<string, unknown> | undefined,
+    elements: Record<string, ReactNode>,
+    value?: unknown
+  ) => {
+    const renderContext = {
+      context: context || {},
+      rerender: () => {
+        throw new Error('Cannot rerender');
+      },
+    };
+    const elementEntries: [string, unknown][] = Object.entries(elements).map(([k, v]) => [
+      k,
+      createElement(() => {
+        setRenderContext(renderContext);
+        return v as ReactNode; // XXX lie the type
+      }),
+    ]);
+    if (value !== undefined) {
+      elementEntries.push(['_value', value]);
+    }
+    return Object.fromEntries(elementEntries);
+  };
+
+  const renderWithContext = async (
+    context: Record<string, unknown> | undefined,
     input: string,
     searchParams: URLSearchParams
   ) => {
-    const elements = await renderEntries.call(renderContext, input, searchParams);
+    const renderContext = {
+      context: context || {},
+      rerender: () => {
+        throw new Error('Cannot rerender');
+      },
+    };
+    const elements = await runWithRenderContext(renderContext, () =>
+      renderEntries(input, searchParams)
+    );
     if (elements === null) {
       const err = new Error('No function component found');
       (err as any).statusCode = 404; // HACK our convention for NotFound
@@ -132,8 +156,55 @@ export async function renderRsc(
     if (Object.keys(elements).some((key) => key.startsWith('_'))) {
       throw new Error('"_" prefix is reserved');
     }
-    return elements;
+    return wrapWithContext(context, elements);
   };
+
+  const renderWithContextWithAction = async (
+    context: Record<string, unknown> | undefined,
+    actionFn: () => unknown
+  ) => {
+    let elementsPromise: Promise<Record<string, ReactNode>> = Promise.resolve({});
+    let rendered = false;
+    const renderContext = {
+      context: context || {},
+      rerender: async (input: string, searchParams = new URLSearchParams()) => {
+        if (rendered) {
+          throw new Error('already rendered');
+        }
+        elementsPromise = Promise.all([elementsPromise, renderEntries(input, searchParams)]).then(
+          ([oldElements, newElements]) => ({
+            ...oldElements,
+            // FIXME we should actually check if newElements is null and send an error
+            ...newElements,
+          })
+        );
+      },
+    };
+    const actionValue = await runWithRenderContext(renderContext, actionFn);
+    const elements = await elementsPromise;
+    rendered = true;
+    if (Object.keys(elements).some((key) => key.startsWith('_'))) {
+      throw new Error('"_" prefix is reserved');
+    }
+    return wrapWithContext(context, elements, actionValue);
+  };
+
+  // const render = async (
+  //   renderContext: RenderContext,
+  //   input: string,
+  //   searchParams: URLSearchParams
+  // ) => {
+  //   const elements = await renderEntries.call(renderContext, input, searchParams);
+  //   if (elements === null) {
+  //     const err = new Error('No function component found');
+  //     (err as any).statusCode = 404; // HACK our convention for NotFound
+  //     throw err;
+  //   }
+  //   if (Object.keys(elements).some((key) => key.startsWith('_'))) {
+  //     throw new Error('"_" prefix is reserved');
+  //   }
+  //   return elements;
+  // };
 
   const bundlerConfig = new Proxy(
     {},
@@ -177,7 +248,8 @@ export async function renderRsc(
     let mod: any;
     if (opts.isExporting === false) {
       // console.log('Loading module:', fileId, name);
-      mod = await opts.customImport(resolveClientEntry(fileId).url);
+      mod = await opts.customImport(fileId);
+      // mod = await opts.customImport(resolveClientEntry(fileId).url);
       // console.log('Loaded module:', mod);
     } else {
       throw new Error('TODO: Make this work with Metro');
@@ -188,72 +260,13 @@ export async function renderRsc(
     }
     const fn = mod[name] || mod;
     // console.log('Target function:', fn);
-
-    let elements: Promise<Record<string, ReactNode>> = Promise.resolve({});
-    let rendered = false;
-
-    // TODO: Define context
-    // const context = {};
-    const rerender = (input: string, searchParams = new URLSearchParams()) => {
-      if (rendered) {
-        throw new Error('already rendered');
-      }
-      const renderContext: RenderContext = { rerender, context };
-      elements = Promise.all([elements, render(renderContext, input, searchParams)]).then(
-        ([oldElements, newElements]) => ({
-          ...oldElements,
-          ...newElements,
-        })
-      );
-    };
-    const renderContext: RenderContext = { rerender, context };
-    const data = await fn.apply(renderContext, args);
-    const resolvedElements = await elements;
-    rendered = true;
-    return renderToReadableStream({ ...resolvedElements, _value: data }, bundlerConfig);
+    const elements = await renderWithContextWithAction(context, () => fn(...args));
+    return renderToReadableStreamWithDebugging(elements, bundlerConfig);
   }
 
   // method === 'GET'
-  const renderContext: RenderContext = {
-    rerender: () => {
-      throw new Error('Cannot rerender');
-    },
-    context,
-  };
-  const elements = await render(renderContext, input, searchParams);
-
-  const stream = renderToReadableStream(elements, bundlerConfig);
-
-  // Logging is very useful for native platforms where the network tab isn't always available.
-  if (debug.enabled) {
-    return withDebugLogging(stream);
-  }
-
-  return stream;
-}
-
-function withDebugLogging(stream: ReadableStream) {
-  const textDecoder = new TextDecoder();
-
-  // Wrap the stream and log chunks to the terminal.
-  return new ReadableStream({
-    start(controller) {
-      stream.pipeTo(
-        new WritableStream({
-          write(chunk) {
-            console.log(chalk`{dim [rsc]}`, textDecoder.decode(chunk));
-            controller.enqueue(chunk);
-          },
-          close() {
-            controller.close();
-          },
-          abort(reason) {
-            controller.error(reason);
-          },
-        })
-      );
-    },
-  });
+  const elements = await renderWithContext(context, input, searchParams);
+  return renderToReadableStreamWithDebugging(elements, bundlerConfig);
 }
 
 // TODO is this correct? better to use a library?
@@ -332,7 +345,7 @@ export async function getBuildConfig(opts: {
       input,
       searchParams: new URLSearchParams(),
       method: 'GET',
-      context: null,
+      context: undefined,
       moduleIdCallback: ({ id }) => idSet.add(id),
       isExporting: true,
       resolveClientEntry: opts.resolveClientEntry,
@@ -407,4 +420,38 @@ export async function getSsrConfig(args: GetSsrConfigArgs, opts: GetSsrConfigOpt
     ...ssrConfig,
     body: renderToReadableStream(ssrConfig.body, bundlerConfig),
   };
+}
+
+// Custom:
+
+function renderToReadableStreamWithDebugging(...args: Parameters<typeof renderToReadableStream>) {
+  const stream = renderToReadableStream(...args);
+  if (debug.enabled) {
+    return withDebugLogging(stream);
+  }
+  return stream;
+}
+
+function withDebugLogging(stream: ReadableStream) {
+  const textDecoder = new TextDecoder();
+
+  // Wrap the stream and log chunks to the terminal.
+  return new ReadableStream({
+    start(controller) {
+      stream.pipeTo(
+        new WritableStream({
+          write(chunk) {
+            console.log(chalk`{dim [rsc]}`, textDecoder.decode(chunk));
+            controller.enqueue(chunk);
+          },
+          close() {
+            controller.close();
+          },
+          abort(reason) {
+            controller.error(reason);
+          },
+        })
+      );
+    },
+  });
 }

@@ -1,16 +1,14 @@
+import { cache } from 'react';
+
 import type { ReactNode } from 'react';
 
 import type { PathSpec } from './path';
 
+type Config = any;
+
 type Elements = Record<string, ReactNode>;
 
-export interface RenderContext<T = unknown> {
-  rerender: (input: string, searchParams?: URLSearchParams) => void;
-  context: T;
-}
-
 export type RenderEntries = (
-  this: RenderContext,
   input: string,
   searchParams: URLSearchParams
 ) => Promise<Elements | null>;
@@ -19,14 +17,15 @@ export type GetBuildConfig = (
   unstable_collectClientModules: (input: string) => Promise<string[]>
 ) => Promise<
   Iterable<{
-    pathname: string;
+    pathname: string | PathSpec; // TODO drop support for string?
+    isStatic?: boolean;
     entries?: Iterable<{
       input: string;
       skipPrefetch?: boolean;
       isStatic?: boolean;
     }>;
     customCode?: string; // optional code to inject TODO hope to remove this
-    context?: unknown;
+    context?: Record<string, unknown>;
   }>
 >;
 
@@ -34,7 +33,6 @@ export type GetSsrConfig = (
   pathname: string,
   options: {
     searchParams: URLSearchParams;
-    isPrd: boolean;
   }
 ) => Promise<{
   input: string;
@@ -55,6 +53,7 @@ export type EntriesDev = {
 };
 
 export type EntriesPrd = EntriesDev & {
+  loadConfig: () => Promise<Config>;
   loadModule: (id: string) => Promise<unknown>;
   dynamicHtmlPaths: [pathSpec: PathSpec, htmlHead: string][];
   publicIndexHtml: string;
@@ -63,4 +62,55 @@ export type EntriesPrd = EntriesDev & {
 export function getEnv(key: string): string | undefined {
   // HACK we may want to use a server-side context or something
   return (globalThis as any).__WAKU_PRIVATE_ENV__[key];
+}
+
+type RenderContext<RscContext extends Record<string, unknown> = Record<string, unknown>> = {
+  rerender: (input: string, searchParams?: URLSearchParams) => void;
+  context: RscContext;
+};
+
+import OS from 'expo-router/os';
+
+// TODO(EvanBacon): This can leak between platforms and runs.
+// We need to share this module between the server action module and the renderer module, per platform, and invalidate on refreshes.
+function getGlobalCacheForPlatform() {
+  if (!globalThis.__EXPO_RSC_CACHE__) {
+    globalThis.__EXPO_RSC_CACHE__ = new Map();
+  }
+
+  if (globalThis.__EXPO_RSC_CACHE__.has(OS)) {
+    console.log('[RSC]: REUSE:', globalThis.__EXPO_RSC_CACHE__.get(OS));
+    return globalThis.__EXPO_RSC_CACHE__.get(OS)!;
+  }
+  const serverCache = cache(() => [] as [RenderContext?]);
+  globalThis.__EXPO_RSC_CACHE__.set(OS, serverCache);
+  return serverCache;
+}
+
+const getRenderContextHolder = getGlobalCacheForPlatform();
+
+/**
+ * This is an internal function and not for public use.
+ */
+export const setRenderContext = (renderContext: RenderContext) => {
+  const holder = getRenderContextHolder();
+  holder[0] = renderContext;
+};
+
+export function rerender(input: string, searchParams?: URLSearchParams) {
+  const holder = getRenderContextHolder();
+  if (!holder[0]) {
+    throw new Error('[Bug] No render context found');
+  }
+  holder[0].rerender(input, searchParams);
+}
+
+export function getContext<
+  RscContext extends Record<string, unknown> = Record<string, unknown>,
+>(): RscContext {
+  const holder = getRenderContextHolder();
+  if (!holder[0]) {
+    throw new Error('[Bug] No render context found');
+  }
+  return holder[0].context as RscContext;
 }

@@ -61,7 +61,17 @@ const checkStatus = async (responsePromise: Promise<Response>): Promise<Response
     // NOTE(EvanBacon): Transform the Metro development error into a JS error that can be used by LogBox.
     // This was tested against using a Class component in a server component.
     if (__DEV__ && response.status === 500) {
-      const errorJson = await response.json();
+      const errorText = await response.text();
+
+      let errorJson;
+
+      try {
+        errorJson = JSON.parse(errorJson);
+      } catch {
+        const err = new Error(errorText);
+        throw err;
+      }
+
       const err = new Error(errorJson.message);
       for (const key in errorJson) {
         (err as any)[key] = errorJson[key];

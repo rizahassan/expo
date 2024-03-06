@@ -126,6 +126,8 @@ export const HMRClient = {
         deleted: unknown[];
       }) => {
         const hasUpdate = added.length || modified.length || deleted.length;
+        // console.log('update-start', hasUpdate, isInitialUpdate, added, modified, deleted);
+
         if (client.isEnabled() && !isInitialUpdate && hasUpdate) {
           onReload();
         }

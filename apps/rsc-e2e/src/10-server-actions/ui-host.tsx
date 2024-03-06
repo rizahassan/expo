@@ -3,26 +3,20 @@
 import { View, Text, Button } from 'react-native';
 import { useState, useTransition } from 'react';
 
-export const Counter = ({
-  greet,
-  increment,
+export const UIHost = ({
+  renderNativeViews,
 }: {
-  greet: (name: string) => Promise<string>;
-  increment: () => void;
+  renderNativeViews: (param: string) => Promise<React.ReactElement>;
 }) => {
   const [isPending, startTransition] = useTransition();
   const [count, setCount] = useState(0);
-  const [text, setText] = useState<string | Promise<string>>('');
+  const [remoteJsx, setText] = useState<React.ReactElement | Promise<React.ReactElement>>(<></>);
   const handleClick1 = () => {
     startTransition(() => {
-      setText(greet('c=' + count));
+      setText(renderNativeViews('c=' + count));
     });
   };
-  const handleClick2 = () => {
-    startTransition(() => {
-      increment();
-    });
-  };
+
   return (
     <View
       style={{
@@ -35,8 +29,7 @@ export const Counter = ({
       <Text>(client component)</Text>
       <Button onPress={() => setCount((c) => c + 1)} title="Increment++" />
 
-      <Button onPress={handleClick1} title={`Invoke: greet("c=" + ${count})`} />
-      <Button onPress={handleClick2} title={`Increment server counter`} />
+      <Button onPress={handleClick1} title={`Invoke: renderNativeViews("c=" + ${count})`} />
 
       <View
         style={{
@@ -49,7 +42,8 @@ export const Counter = ({
         <Text>{`${isPending ? 'Transition Pending...' : ''}`}</Text>
 
         <Text>Server Result → </Text>
-        <Text>{text || '[No results]'}</Text>
+
+        {remoteJsx}
       </View>
     </View>
   );

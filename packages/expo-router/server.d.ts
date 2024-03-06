@@ -6,3 +6,5 @@ export type RequestHandler = (
 ) => Response | Promise<Response>;
 
 export { ExpoRequest, ExpoResponse };
+
+export * from './build/rsc/server'

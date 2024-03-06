@@ -4,16 +4,8 @@ import OS from 'expo-router/os';
 
 import { View, Switch, TextInput, ScrollView, Text } from 'react-native';
 
-// async function* asyncGenerator() {
-//   yield <Text>One</Text>;
-//   await new Promise((resolve) => setTimeout(resolve, 1000));
-//   yield <Text>Two</Text>;
-//   await new Promise((resolve) => setTimeout(resolve, 1000));
-//   return <Text>Three</Text>;
-// }
-
-export const greet = (name: string) => {
-  // return asyncGenerator();
+export const renderNativeViews = (name: string) => {
+  
   return (
     <View style={{ borderWidth: 1, padding: 4, margin: 4, gap: 8 }}>
       <View>

@@ -616,13 +616,6 @@ export class MetroBundlerDevServer extends BundlerDevServer {
       return Math.abs(hash);
     }
 
-    const fileURLToFilePath = (fileURL: string) => {
-      if (!fileURL.startsWith('file://')) {
-        throw new Error('Not a file URL');
-      }
-      return decodeURI(fileURL.slice('file://'.length));
-    };
-
     const {
       mode,
       minify,
@@ -720,10 +713,31 @@ export class MetroBundlerDevServer extends BundlerDevServer {
     };
   }
 
+  private serverActionCache = new Map<
+    // platform
+    string,
+    Map<
+      // module Id
+      string,
+      // contents
+      any
+    >
+  >();
+
   private setupHmr(url: URL) {
     const onReload = () => {
       // Send reload command to client from Fast Refresh code.
-      debug('[CLI]: Reload RSC');
+      console.log('[CLI]: Reload RSC');
+      // debug('[CLI]: Reload RSC');
+      //
+
+      // Clear server action cache and nuke all local state when a file changes.
+      this.serverActionCache.clear();
+
+      // NOTE: We cannot clear the renderer context because it would break the mounted context state.
+
+      // Clear the render context to ensure that the next render is a fresh start.
+      this.rscRenderContext.clear();
 
       this.broadcastMessage('sendDevCommand', {
         name: 'rsc-reload',
@@ -1105,6 +1119,45 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
     // await appendFile(distEntriesFile, code);
   }
 
+  private rscRendererCache = new Map<
+    string,
+    typeof import('expo-router/src/static/rsc-renderer')
+  >();
+
+  private async getRscRendererAsync(platform: string) {
+    // NOTE(EvanBacon): We memoize this now that there's a persistent server storage cache for Server Actions.
+    if (this.rscRendererCache.has(platform)) {
+      return this.rscRendererCache.get(platform)!;
+    }
+
+    // TODO: Extract CSS Modules / Assets from the bundler process
+    const renderer = await this.ssrLoadModuleWithHmr<
+      //   typeof import('expo-router/build/static/rsc-renderer')
+      // >('expo-router/node/rsc.js', {
+      typeof import('expo-router/src/static/rsc-renderer')
+    >('expo-router/src/static/rsc-renderer.ts', {
+      environment: 'react-server',
+      platform,
+    });
+
+    this.rscRendererCache.set(platform, renderer);
+    return renderer;
+  }
+
+  private rscRenderContext = new Map<string, any>();
+
+  private getRscRenderContext(platform: string) {
+    // NOTE(EvanBacon): We memoize this now that there's a persistent server storage cache for Server Actions.
+    if (this.rscRenderContext.has(platform)) {
+      return this.rscRenderContext.get(platform)!;
+    }
+
+    const context = {};
+
+    this.rscRenderContext.set(platform, context);
+    return context;
+  }
+
   async renderRscToReadableStream({
     input,
     searchParams,
@@ -1129,19 +1182,11 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
       assert(body, 'Server request must be provided when method is POST (server actions)');
     }
 
-    // TODO: Extract CSS Modules / Assets from the bundler process
-    const { renderRsc } = await this.ssrLoadModuleWithHmr<
-      //   typeof import('expo-router/build/static/rsc-renderer')
-      // >('expo-router/node/rsc.js', {
-      typeof import('expo-router/src/static/rsc-renderer')
-    >('expo-router/src/static/rsc-renderer.ts', {
-      environment: 'react-server',
-      platform,
-    });
+    const { renderRsc } = await this.getRscRendererAsync(platform);
 
     // TODO: Add config
     const config = {};
-    const context = {};
+    const context = this.getRscRenderContext(platform);
 
     const universalProps = {
       body,
@@ -1193,28 +1238,45 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
       const pipe = await renderRsc({
         ...universalProps,
         isExporting: false,
-        customImport: async (relativeDevServerUrl: string): Promise<any> => {
-          const url = new URL(relativeDevServerUrl, this.getDevServerUrlOrAssert());
-
-          // TODO: Apply all params here.
-          url.searchParams.set('modulesOnly', 'true');
-          url.searchParams.set('runModule', 'true');
-
-          url.searchParams.set('transform.environment', 'react-server');
-          url.searchParams.set('resolver.environment', 'react-server');
-
-          url.searchParams.set('platform', platform);
-
-          const urlString = url.toString();
-          const contents = await metroFetchAsync(this.projectRoot, urlString);
-          // console.log('Server action:');
-          // console.log(contents);
-          return evalMetro(this.projectRoot, contents.src, contents.filename);
+        customImport: async (serverActionId: string): Promise<any> => {
+          const filePath = serverActionId.startsWith('file://')
+            ? fileURLToFilePath(serverActionId)
+            : serverActionId;
+          console.log('[CLI]: Get server action:', filePath);
+          return this.ssrImportServerActionAsync(filePath, platform);
         },
       });
 
       return pipe;
     }
+  }
+
+  private async ssrImportServerActionAsync(moduleId: string, platform: string) {
+    if (!this.serverActionCache.has(platform)) {
+      this.serverActionCache.set(platform, new Map());
+    }
+    if (this.serverActionCache.get(platform)!.has(moduleId)) {
+      const cached = this.serverActionCache.get(platform)!.get(moduleId);
+      console.log('Server action cache hit:', moduleId, cached);
+      return cached;
+    }
+
+    console.log('Bundle Server Action:', moduleId);
+    const md = await this.ssrLoadModuleWithHmr(moduleId, {
+      isClientBoundary: true,
+      platform,
+      environment: 'react-server',
+    });
+
+    if (!this.serverActionCache.has(platform)) {
+      this.serverActionCache.set(platform, new Map());
+    }
+    if (!this.serverActionCache.get(platform)!.has(moduleId)) {
+      this.serverActionCache.get(platform)!.set(moduleId, md);
+    }
+
+    console.log('[CLI]: Server Action:', md);
+    return md;
   }
 
   protected async startImplementationAsync(
@@ -1371,11 +1433,8 @@ export const publicIndexHtml= ${JSON.stringify(publicIndexHtml)};
               throw error;
             }
 
-            // res.statusCode = 500;
-            // res.statusMessage = `Metro Bundler encountered an error (check the terminal for more info).`;
             const sanitizedServerMessage = stripAnsi(error.message) ?? error.message;
-
-            throw new Response(`Metro Bundler encountered an error: ` + sanitizedServerMessage, {
+            throw new Response(sanitizedServerMessage, {
               status: 500,
               headers: {
                 'Content-Type': 'text/plain',
@@ -1798,4 +1857,11 @@ const pathSpec2pathname = (pathSpec: PathSpec): string => {
     throw new Error('Cannot convert pathSpec to pathname: ' + JSON.stringify(pathSpec));
   }
   return '/' + pathSpec.map(({ name }) => name!).join('/');
+};
+
+const fileURLToFilePath = (fileURL: string) => {
+  if (!fileURL.startsWith('file://')) {
+    throw new Error('Not a file URL');
+  }
+  return decodeURI(fileURL.slice('file://'.length));
 };

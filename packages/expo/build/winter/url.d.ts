@@ -5,6 +5,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+import 'reflect.ownkeys/auto';
 import { URL, URLSearchParams } from 'whatwg-url-without-unicode';
 export { URL, URLSearchParams };
 //# sourceMappingURL=url.d.ts.map

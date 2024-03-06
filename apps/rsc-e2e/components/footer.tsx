@@ -1,7 +1,7 @@
 'use client';
 import { Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ComponentProps } from 'react';
 import { Link } from 'expo-router/build/rsc/router/client';
 
@@ -12,8 +12,8 @@ export function Footer({
   path: string;
   items: { icon: ComponentProps<typeof MaterialIcons>['name']; href: string }[];
 }) {
-  const { bottom } = useSafeAreaInsets();
-
+  // const { bottom } = useSafeAreaInsets();
+  const bottom = 56;
   return (
     <View
       style={{

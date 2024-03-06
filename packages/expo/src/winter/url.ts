@@ -8,6 +8,8 @@
 
 // This file should not import `react-native` in order to remain self-contained.
 
+// NOTE: New issue in RN 74, need Reflect to be polyfilled for URLSearchParams. https://github.com/facebook/hermes/issues/259
+import 'reflect.ownkeys/auto';
 import { URL, URLSearchParams } from 'whatwg-url-without-unicode';
 
 let isSetup = false;

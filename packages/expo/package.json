@@ -73,6 +73,7 @@
     "expo-modules-autolinking": "1.10.0",
     "expo-modules-core": "1.11.2",
     "fbemitter": "^3.0.0",
+    "reflect.ownkeys": "^1.1.4",
     "whatwg-url-without-unicode": "8.0.0-3"
   },
   "devDependencies": {

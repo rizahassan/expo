@@ -102,14 +102,19 @@ export function createURL(path, { scheme, queryParams = {}, isTripleSlashed = fa
             ...paramsFromHostUri,
         };
     }
-    queryString = new URLSearchParams(
-    // For legacy purposes, we'll strip out the nullish values before creating the URL.
-    Object.fromEntries(Object.entries(queryParams).filter(([, value]) => value != null))).toString();
-    if (queryString) {
-        queryString = `?${queryString}`;
+    try {
+        queryString = new URLSearchParams(
+        // For legacy purposes, we'll strip out the nullish values before creating the URL.
+        Object.fromEntries(Object.entries(queryParams).filter(([, value]) => value != null))).toString();
+        if (queryString) {
+            queryString = `?${queryString}`;
+        }
+        hostUri = ensureLeadingSlash(hostUri, !isTripleSlashed);
+        return encodeURI(`${resolvedScheme}:${isTripleSlashed ? '/' : ''}/${hostUri}${path}${queryString}`);
+    } catch (error) {
+        console.error(error);
+        throw error
     }
-    hostUri = ensureLeadingSlash(hostUri, !isTripleSlashed);
-    return encodeURI(`${resolvedScheme}:${isTripleSlashed ? '/' : ''}/${hostUri}${path}${queryString}`);
 }
 // @needsAudit
 /**

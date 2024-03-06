@@ -7,7 +7,7 @@
 ### 🎉 New features
 
 - Mark React client components with "use client" directives. ([#27300](https://github.com/expo/expo/pull/27300) by [@EvanBacon](https://github.com/EvanBacon))
-- Allow platform extensions for layout and route files
+- Allow platform extensions for layout and route files ([#27408](https://github.com/expo/expo/pull/27408) by [@marklawlor](https://github.com/marklawlor))
 
 ### 🐛 Bug fixes
 

@@ -115,6 +115,7 @@ const fastHashMemoized = memoize(fastHash);
  * - Alias `react-native` to `react-native-web` on web.
  * - Redirect `react-native-web/dist/modules/AssetRegistry/index.js` to `@react-native/assets/registry.js` on web.
  * - Add support for `tsconfig.json`/`jsconfig.json` aliases via `compilerOptions.paths`.
+ * - Alias react-native renderer code to a vendored React canary build on native.
  */
 export function withExtendedResolver(
   config: ConfigT,
@@ -129,7 +130,7 @@ export function withExtendedResolver(
     isTsconfigPathsEnabled?: boolean;
     isFastResolverEnabled?: boolean;
     isExporting?: boolean;
-    isReactCanaryEnabled: boolean;
+    isReactCanaryEnabled?: boolean;
   }
 ) {
   if (isFastResolverEnabled) {
@@ -395,14 +396,9 @@ export function withExtendedResolver(
 
     // Node.js externals support
     (context: ResolutionContext, moduleName: string, platform: string | null) => {
-      // const isReactServer = context.customResolverOptions?.environment === 'react-server';
-
-      // if (
-      //   // React Server Components require Node.js support when bundling for native platforms.
-      //   !isReactServer
-      // ) {
-      //   return null;
-      // }
+      const isServer =
+        context.customResolverOptions?.environment === 'node' ||
+        context.customResolverOptions?.environment === 'react-server';
 
       const moduleId = isNodeExternal(moduleName);
       if (!moduleId) {
@@ -412,12 +408,17 @@ export function withExtendedResolver(
       if (
         // In browser runtimes, we want to either resolve a local node module by the same name, or shim the module to
         // prevent crashing when Node.js built-ins are imported.
-        context.customResolverOptions?.environment !== 'node' &&
-        context.customResolverOptions?.environment !== 'react-server'
+        !isServer
       ) {
         // Perform optional resolve first. If the module doesn't exist (no module in the node_modules)
         // then we can mock the file to use an empty module.
         const result = getOptionalResolver(context, platform)(moduleName);
+
+        if (!result && platform !== 'web') {
+          // Preserve previous behavior where native throws an error on node.js internals.
+          return null;
+        }
+
         return (
           result ?? {
             // In this case, mock the file to use an empty module.
@@ -536,18 +537,32 @@ export function withExtendedResolver(
         return result;
       }
 
-      // Replace the web resolver with the original one.
-      // This is basically an alias for web-only.
-      // TODO: Drop this in favor of the standalone asset registry module.
-      if (shouldAliasAssetRegistryForWeb(platform, result)) {
-        // @ts-expect-error: `readonly` for some reason.
-        result.filePath = assetRegistryPath;
-      }
+      if (platform === 'web') {
+        // Replace the web resolver with the original one.
+        // This is basically an alias for web-only.
+        // TODO: Drop this in favor of the standalone asset registry module.
+        if (shouldAliasAssetRegistryForWeb(platform, result)) {
+          // @ts-expect-error: `readonly` for some reason.
+          result.filePath = assetRegistryPath;
+        }
 
-      if (isReactCanaryEnabled) {
+        if (platform === 'web' && result.filePath.includes('node_modules')) {
+          // Replace with static shims
+
+          const normalName = normalizeSlashes(result.filePath)
+            // Drop everything up until the `node_modules` folder.
+            .replace(/.*node_modules\//, '');
+
+          const shimPath = path.join(shimsFolder, normalName);
+          if (fs.existsSync(shimPath)) {
+            // @ts-expect-error: `readonly` for some reason.
+            result.filePath = shimPath;
+          }
+        }
+      } else {
         // When server components are enabled, redirect React Native's renderer to the canary build
         // this will enable the use hook and other requisite features from React 19.
-        if (platform !== 'web' && result.filePath.includes('node_modules')) {
+        if (isReactCanaryEnabled && result.filePath.includes('node_modules')) {
           const normalName = normalizeSlashes(result.filePath)
             // Drop everything up until the `node_modules` folder.
             .replace(/.*node_modules\//, '');
@@ -559,20 +574,6 @@ export function withExtendedResolver(
             // @ts-expect-error: `readonly` for some reason.
             result.filePath = shimPath;
           }
-        }
-      }
-
-      if (platform === 'web' && result.filePath.includes('node_modules')) {
-        // Replace with static shims
-
-        const normalName = normalizeSlashes(result.filePath)
-          // Drop everything up until the `node_modules` folder.
-          .replace(/.*node_modules\//, '');
-
-        const shimPath = path.join(shimsFolder, normalName);
-        if (fs.existsSync(shimPath)) {
-          // @ts-expect-error: `readonly` for some reason.
-          result.filePath = shimPath;
         }
       }
 

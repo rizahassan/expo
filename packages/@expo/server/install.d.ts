@@ -1,20 +1,4 @@
-declare global {
-  /** @deprecated */
-  var ExpoRequest: typeof Request;
-  /** @deprecated */
-  var ExpoResponse: typeof Response;
-}
-
-/** @deprecated */
-export declare const ExpoRequest: {
-  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
-  prototype: Request;
-};
-/** @deprecated */
-export declare const ExpoResponse: {
-  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
-  prototype: Request;
-};
+/* eslint-disable no-var */
 
 declare const Response: {
   prototype: Response;
@@ -25,4 +9,20 @@ declare const Response: {
   json(data: any, init?: ResponseInit): Response;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/redirect_static) */
   redirect(url: string | URL, status?: number): Response;
+};
+declare global {
+  /** @deprecated */
+  var ExpoRequest: typeof Request;
+  /** @deprecated */
+  var ExpoResponse: typeof Response;
+}
+/** @deprecated */
+export declare const ExpoRequest: {
+  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
+  prototype: Request;
+};
+/** @deprecated */
+export declare const ExpoResponse: {
+  new (input: URL | RequestInfo, init?: RequestInit | undefined): Request;
+  prototype: Request;
 };

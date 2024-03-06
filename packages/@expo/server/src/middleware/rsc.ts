@@ -108,7 +108,6 @@ export function getRscMiddleware(options: {
         body: req.body,
         contentType: req.headers.get('Content-Type') ?? '',
       };
-      console.log('args', args);
       const readable = await options.renderRsc(args);
       //   const readable = await (ctx.devServer
       //     ? ctx.devServer.renderRscWithWorker(args)

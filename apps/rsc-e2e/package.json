@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
+    "export:actions": "RSC_ROOT=actions expo export --output-dir dist-actions -p web",
+    "start:actions": "RSC_ROOT=actions expo start",
     "export:kitchen": "RSC_ROOT=kitchen expo export --output-dir dist-kitchen -p web",
     "start:kitchen": "RSC_ROOT=kitchen expo start",
     "export:router": "RSC_ROOT=app expo export --output-dir dist-router -p web",

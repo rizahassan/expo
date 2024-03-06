@@ -7,7 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.App = void 0;
 const react_1 = __importDefault(require("react"));
-const react_native_safe_area_context_1 = require("react-native-safe-area-context");
+// import { SafeAreaProvider } from 'react-native-safe-area-context';
 const SkipContext_1 = require("./rsc/router/SkipContext");
 const WindowLocationContext_1 = require("./rsc/router/WindowLocationContext");
 const client_1 = require("./rsc/router/client");
@@ -40,14 +40,16 @@ function RootErrorBoundary(props) {
 function App() {
     return (<WindowLocationContext_1.LocationContext>
       <SkipContext_1.SkipMetaProvider>
-        <react_native_safe_area_context_1.SafeAreaProvider initialMetrics={{
+        {/* TODO: Add safe area back after it has v74 support. */}
+        {/* <SafeAreaProvider
+          initialMetrics={{
             frame: { x: 0, y: 0, width: 0, height: 0 },
             insets: { top: 0, left: 0, right: 0, bottom: 0 },
-        }}>
+          }}> */}
           <Try_1.Try catch={RootErrorBoundary}>
             <client_1.Router />
           </Try_1.Try>
-        </react_native_safe_area_context_1.SafeAreaProvider>
+        {/* </SafeAreaProvider> */}
       </SkipContext_1.SkipMetaProvider>
     </WindowLocationContext_1.LocationContext>);
 }

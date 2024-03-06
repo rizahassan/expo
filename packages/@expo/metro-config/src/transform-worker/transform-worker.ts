@@ -44,6 +44,7 @@ export async function transform(
   if (filename.match(/expo-router\/virtual-client-boundaries\.js/)) {
     const environment = options.customTransformOptions?.environment;
     const isServer = environment === 'node' || environment === 'react-server';
+
     if (!isServer) {
       const clientBoundaries = getStringArray(options.customTransformOptions?.clientBoundaries);
       // Inject client boundaries into the root client bundle for production bundling.
@@ -67,7 +68,7 @@ export async function transform(
           Buffer.from('/* RSC client boundaries */\nconsole.log("DEBUG_MARKER")\n' + src),
           options
         );
-      } else {
+      } else if (!options.dev) {
         console.warn('clientBoundaries is not defined:', filename, options.customTransformOptions);
       }
     }

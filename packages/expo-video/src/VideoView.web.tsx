@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { VideoPlayer, VideoViewProps } from './VideoView.types';
-
+import { PlayerStatus, VideoPlayer, VideoSource, VideoViewProps } from './VideoView.types';
 /**
  * This audio context is used to mute all but one video when multiple video views are playing from one player simultaneously.
  * Using audio context nodes allows muting videos without displaying the mute icon in the video player.
@@ -17,7 +16,6 @@ if (audioContext && zeroGainNode) {
     "Couldn't create AudioContext, this might affect the audio playback when using multiple video views with the same player."
   );
 }
-
 class VideoPlayerWeb implements VideoPlayer {
   constructor(source: string | null = null) {
     this.src = source;
@@ -32,6 +30,7 @@ class VideoPlayerWeb implements VideoPlayer {
   _loop: boolean = false;
   _playbackRate: number = 1.0;
   _preservesPitch: boolean = true;
+  _status: PlayerStatus = 'idle';
   staysActiveInBackground: boolean = false; // Not supported on web. Dummy to match the interface.
 
   set muted(value: boolean) {
@@ -98,6 +97,10 @@ class VideoPlayerWeb implements VideoPlayer {
       video.preservesPitch = value;
     });
     this._preservesPitch = value;
+  }
+
+  get status(): PlayerStatus {
+    return this._status;
   }
 
   mountVideoView(video: HTMLVideoElement) {
@@ -219,6 +222,18 @@ class VideoPlayerWeb implements VideoPlayer {
         mountedVideo.playbackRate = video.playbackRate;
       });
     };
+
+    video.onerror = () => {
+      this._status = 'error';
+    };
+
+    video.onloadeddata = () => {
+      this._status = 'readyToPlay';
+    };
+
+    video.onwaiting = () => {
+      this._status = 'loading';
+    };
   }
 
   release(): void {
@@ -253,11 +268,25 @@ function mapStyles(style: VideoViewProps['style']): React.CSSProperties {
   return flattenedStyles as React.CSSProperties;
 }
 
-export function useVideoPlayer(source: string | null = null): VideoPlayer {
-  return React.useMemo(() => {
-    return new VideoPlayerWeb(source);
+export function useVideoPlayer(
+  source: VideoSource,
+  factory: (player: VideoPlayer) => void
+): VideoPlayer {
+  return useMemo(() => {
+    const player = createVideoPlayer(source);
+    if (factory) {
+      factory(player);
+    }
+    return player;
     // should this not include source?
   }, []);
+}
+
+function createVideoPlayer(source: VideoSource): VideoPlayer {
+  if (typeof source === 'string') {
+    return new VideoPlayerWeb(source);
+  }
+  return new VideoPlayerWeb(source?.uri);
 }
 
 export const VideoView = forwardRef((props: { player?: VideoPlayerWeb } & VideoViewProps, ref) => {

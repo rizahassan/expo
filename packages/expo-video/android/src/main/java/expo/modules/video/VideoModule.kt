@@ -149,11 +149,6 @@ class VideoModule : Module() {
           ref.playing
         }
 
-      Property("isLoading")
-        .get { ref: VideoPlayer ->
-          ref.isLoading
-        }
-
       Property("muted")
         .get { ref: VideoPlayer ->
           ref.muted
@@ -209,6 +204,11 @@ class VideoModule : Module() {
           appContext.mainQueue.launch {
             ref.preservesPitch = preservesPitch
           }
+        }
+
+      Property("status")
+        .get { ref: VideoPlayer ->
+          ref.status
         }
 
       Property("staysActiveInBackground")

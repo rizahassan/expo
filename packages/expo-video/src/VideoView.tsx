@@ -13,13 +13,19 @@ import NativeVideoModule from './NativeVideoModule';
 import NativeVideoView from './NativeVideoView';
 import { VideoPlayer, VideoSource, VideoViewProps } from './VideoView.types';
 
-export function useVideoPlayer(source: VideoSource): VideoPlayer {
+export function useVideoPlayer(
+  source: VideoSource,
+  factory?: (player: VideoPlayer) => void
+): VideoPlayer {
   const parsedSource = typeof source === 'string' ? { uri: source } : source;
 
-  return useReleasingSharedObject(
-    () => new NativeVideoModule.VideoPlayer(parsedSource),
-    [JSON.stringify(parsedSource)]
-  );
+  return useReleasingSharedObject(() => {
+    const player = new NativeVideoModule.VideoPlayer(parsedSource);
+    if (factory) {
+      factory(player);
+    }
+    return player;
+  }, [JSON.stringify(parsedSource)]);
 }
 
 /**

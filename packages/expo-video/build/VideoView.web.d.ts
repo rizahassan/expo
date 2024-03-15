@@ -1,5 +1,5 @@
 import React from 'react';
-import { VideoPlayer, VideoViewProps } from './VideoView.types';
+import { PlayerStatus, VideoPlayer, VideoSource, VideoViewProps } from './VideoView.types';
 declare class VideoPlayerWeb implements VideoPlayer {
     constructor(source?: string | null);
     src: string | null;
@@ -11,6 +11,7 @@ declare class VideoPlayerWeb implements VideoPlayer {
     _loop: boolean;
     _playbackRate: number;
     _preservesPitch: boolean;
+    _status: PlayerStatus;
     staysActiveInBackground: boolean;
     set muted(value: boolean);
     get muted(): boolean;
@@ -24,6 +25,7 @@ declare class VideoPlayerWeb implements VideoPlayer {
     set currentTime(value: number);
     get preservesPitch(): boolean;
     set preservesPitch(value: boolean);
+    get status(): PlayerStatus;
     mountVideoView(video: HTMLVideoElement): void;
     unmountVideoView(video: HTMLVideoElement): void;
     play(): void;
@@ -39,7 +41,7 @@ declare class VideoPlayerWeb implements VideoPlayer {
     removeAllListeners(eventName: never): void;
     emit<EventName extends never>(eventName: EventName, ...args: Parameters<Record<never, never>[EventName]>): void;
 }
-export declare function useVideoPlayer(source?: string | null): VideoPlayer;
+export declare function useVideoPlayer(source: VideoSource, factory: (player: VideoPlayer) => void): VideoPlayer;
 export declare const VideoView: React.ForwardRefExoticComponent<{
     player?: VideoPlayerWeb | undefined;
 } & VideoViewProps & React.RefAttributes<unknown>>;

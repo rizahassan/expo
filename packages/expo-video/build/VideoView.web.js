@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 /**
  * This audio context is used to mute all but one video when multiple video views are playing from one player simultaneously.
@@ -26,6 +26,7 @@ class VideoPlayerWeb {
     _loop = false;
     _playbackRate = 1.0;
     _preservesPitch = true;
+    _status = 'idle';
     staysActiveInBackground = false; // Not supported on web. Dummy to match the interface.
     set muted(value) {
         this._mountedVideos.forEach((video) => {
@@ -82,6 +83,9 @@ class VideoPlayerWeb {
             video.preservesPitch = value;
         });
         this._preservesPitch = value;
+    }
+    get status() {
+        return this._status;
     }
     mountVideoView(video) {
         this._mountedVideos.add(video);
@@ -196,6 +200,15 @@ class VideoPlayerWeb {
                 mountedVideo.playbackRate = video.playbackRate;
             });
         };
+        video.onerror = () => {
+            this._status = 'error';
+        };
+        video.onloadeddata = () => {
+            this._status = 'readyToPlay';
+        };
+        video.onwaiting = () => {
+            this._status = 'loading';
+        };
     }
     release() {
         console.warn('The `VideoPlayer.release` method is not supported on web');
@@ -218,11 +231,21 @@ function mapStyles(style) {
     // Looking through react-native-web source code they also just pass styles directly without further conversions, so it's just a cast.
     return flattenedStyles;
 }
-export function useVideoPlayer(source = null) {
-    return React.useMemo(() => {
-        return new VideoPlayerWeb(source);
+export function useVideoPlayer(source, factory) {
+    return useMemo(() => {
+        const player = createVideoPlayer(source);
+        if (factory) {
+            factory(player);
+        }
+        return player;
         // should this not include source?
     }, []);
+}
+function createVideoPlayer(source) {
+    if (typeof source === 'string') {
+        return new VideoPlayerWeb(source);
+    }
+    return new VideoPlayerWeb(source?.uri);
 }
 export const VideoView = forwardRef((props, ref) => {
     const videoRef = useRef(null);

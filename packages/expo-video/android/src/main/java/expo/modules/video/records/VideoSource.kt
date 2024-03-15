@@ -4,24 +4,36 @@ import androidx.media3.common.MediaItem
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import expo.modules.video.UnsupportedDRMTypeException
+import expo.modules.video.VideoManager
 import java.io.Serializable
 
-internal class VideoSource(
+class VideoSource(
   @Field var uri: String? = null,
   @Field var drm: DRMOptions? = null
 ) : Record, Serializable {
+  private fun toMediaId(): String {
+    return "uri:${this.uri}" +
+      "DrmType:${this.drm?.type}" +
+      "DrmLicenseServer:${this.drm?.licenseServer}" +
+      "DrmMultiKey:${this.drm?.multiKey}" +
+      "DRMHeadersKeys:${this.drm?.headers?.keys?.joinToString {it}}}" +
+      "DRMHeadersValues:${this.drm?.headers?.values?.joinToString {it}}}"
+  }
   fun toMediaItem(): MediaItem {
-    val mediaItem = MediaItem
+    val itemBuilder = MediaItem
       .Builder()
       .setUri(this.uri ?: "")
+      .setMediaId(this.toMediaId())
 
     this.drm?.let {
       if (it.type.isSupported()) {
-        mediaItem.setDrmConfiguration(it.toDRMConfiguration())
+        itemBuilder.setDrmConfiguration(it.toDRMConfiguration())
       } else {
         throw UnsupportedDRMTypeException(it.type)
       }
     }
-    return mediaItem.build()
+    val mediaItem = itemBuilder.build()
+    VideoManager.registerVideoSourceToMediaItem(mediaItem, this)
+    return mediaItem
   }
 }

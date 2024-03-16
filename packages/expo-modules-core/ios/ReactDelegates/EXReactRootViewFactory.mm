@@ -64,8 +64,23 @@
     return [weakDelegate createBridgeWithDelegate:delegate launchOptions:launchOptions];
   };
 
-  RCTRootViewFactory *factory = [[RCTRootViewFactory alloc] initWithConfiguration:configuration andTurboModuleManagerDelegate:appDelegate];
-  return [factory viewWithModuleName:moduleName initialProperties:initialProperties launchOptions:launchOptions];
+  if (![appDelegate.rootViewFactory isKindOfClass:EXReactRootViewFactory.class]) {
+    @throw [NSException exceptionWithName:NSInternalInconsistencyException
+                                   reason:@"The appDelegate.rootViewFactory must be an EXReactRootViewFactory instance."
+                                 userInfo:nil];
+  }
+  EXReactRootViewFactory *factory = (EXReactRootViewFactory *)appDelegate.rootViewFactory;
+  return [factory superViewWithModuleName:moduleName initialProperties:initialProperties launchOptions:launchOptions];
+}
+
+/**
+ Calls origin `viewWithModuleName:initialProperties:launchOptions:` from superview (`RCTRootViewFactory`).
+ */
+- (UIView *)superViewWithModuleName:(NSString *)moduleName
+                  initialProperties:(nullable NSDictionary *)initialProperties
+                      launchOptions:(nullable NSDictionary *)launchOptions
+{
+  return [super viewWithModuleName:moduleName initialProperties:initialProperties launchOptions:launchOptions];
 }
 
 + (RCTAppDelegate *)getRCTAppDelegate
@@ -74,7 +89,7 @@
   id delegate = application.delegate;
   if (![delegate isKindOfClass:RCTAppDelegate.class]) {
     @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                   reason:@"The UIApplicationDelegate is a RCTAppDelegate."
+                                   reason:@"The UIApplicationDelegate must be a RCTAppDelegate instance."
                                  userInfo:nil];
   }
   return (RCTAppDelegate *)delegate;
